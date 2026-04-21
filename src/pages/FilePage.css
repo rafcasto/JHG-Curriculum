@@ -185,8 +185,17 @@
 /* ── Content body ─────────────────────────────────────────────────────────── */
 .file-body {
   flex: 1;
-  overflow: auto;
+  display: flex;
+  flex-direction: row;
+  overflow: hidden;
   min-height: 0;
+}
+
+/* Scrollable zone that wraps the markdown content */
+.file-content-scroll {
+  flex: 1;
+  overflow-y: auto;
+  min-width: 0;
 }
 
 /* ── Loading / Error ──────────────────────────────────────────────────────── */

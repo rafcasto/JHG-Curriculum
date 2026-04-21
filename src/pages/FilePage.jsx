@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { useParams, useNavigate, useOutletContext } from 'react-router-dom';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -6,7 +6,34 @@ import { useAuth } from '../contexts/AuthContext';
 import { fetchDocument, saveDocument, deleteDocument } from '../hooks/useDocuments';
 import RichTextEditor from '../components/RichTextEditor';
 import GraphView, { DEFAULT_SETTINGS } from '../components/GraphView';
+import TableOfContents from '../components/TableOfContents';
 import './FilePage.css';
+
+/** Convert heading text to a URL-safe id for anchor links. */
+function slugify(text) {
+  return String(text)
+    .toLowerCase()
+    .replace(/\s+/g, '-')
+    .replace(/[^\w-]/g, '');
+}
+
+/** Custom heading renderers that add id attributes for TOC anchor links. */
+function makeHeading(Tag) {
+  return function Heading({ children, ...props }) {
+    const text = typeof children === 'string'
+      ? children
+      : Array.isArray(children)
+        ? children.map((c) => (typeof c === 'string' ? c : '')).join('')
+        : '';
+    return <Tag id={slugify(text)} {...props}>{children}</Tag>;
+  };
+}
+
+const headingComponents = {
+  h1: makeHeading('h1'),
+  h2: makeHeading('h2'),
+  h3: makeHeading('h3'),
+};
 
 /** Split raw file content into the YAML frontmatter block and the markdown body. */
 function splitFrontmatter(raw = '') {
@@ -35,6 +62,9 @@ export default function FilePage() {
   const [dirty, setDirty] = useState(false);
   const readOnly = doc?.readOnly ?? false;
   const canEdit = role === 'admin' || role === 'editor';
+
+  // Scroll container ref for the TOC intersection observer
+  const scrollRef = useRef(null);
 
   // Local graph panel
   const [showGraph, setShowGraph]       = useState(false);
@@ -239,9 +269,19 @@ export default function FilePage() {
       {/* Content area */}
       <div className="file-body">
         {mode === 'preview' ? (
-          <div className="markdown-body">
-            <ReactMarkdown remarkPlugins={[remarkGfm]}>{content}</ReactMarkdown>
-          </div>
+          <>
+            <div className="file-content-scroll" ref={scrollRef}>
+              <div className="markdown-body">
+                <ReactMarkdown
+                  remarkPlugins={[remarkGfm]}
+                  components={headingComponents}
+                >
+                  {content}
+                </ReactMarkdown>
+              </div>
+            </div>
+            <TableOfContents content={content} scrollRef={scrollRef} />
+          </>
         ) : (
           <RichTextEditor
             key={id}
