@@ -1,0 +1,93 @@
+.navbar {
+  height: 52px;
+  background: #161b22;
+  border-bottom: 1px solid #30363d;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 1.25rem;
+  flex-shrink: 0;
+  z-index: 10;
+}
+
+.navbar-brand {
+  background: none;
+  border: none;
+  color: #e6edf3;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 1rem;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  padding: 0;
+}
+
+.navbar-brand:hover {
+  color: #58a6ff;
+}
+
+.navbar-icon {
+  font-size: 1.25rem;
+  color: #58a6ff;
+}
+
+.navbar-right {
+  display: flex;
+  align-items: center;
+  gap: 0.875rem;
+}
+
+.role-badge {
+  background: rgba(63, 185, 80, 0.15);
+  border: 1px solid rgba(63, 185, 80, 0.4);
+  color: #3fb950;
+  border-radius: 12px;
+  padding: 0.2rem 0.6rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.navbar-email {
+  color: #8b949e;
+  font-size: 0.875rem;
+}
+
+.signout-btn {
+  background: none;
+  border: 1px solid #30363d;
+  color: #8b949e;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.8125rem;
+  padding: 0.3rem 0.625rem;
+  transition: border-color 0.15s, color 0.15s;
+}
+
+.signout-btn:hover {
+  border-color: #f85149;
+  color: #f85149;
+}
+
+.navbar-users-link {
+  background: none;
+  border: 1px solid #30363d;
+  border-radius: 6px;
+  color: #8b949e;
+  cursor: pointer;
+  font-size: 0.8125rem;
+  padding: 0.3rem 0.625rem;
+  transition: border-color 0.15s, color 0.15s;
+}
+
+.navbar-users-link:hover {
+  border-color: #58a6ff;
+  color: #58a6ff;
+}
+
+.role-badge--editor {
+  background: rgba(210, 153, 34, 0.15);
+  border: 1px solid rgba(210, 153, 34, 0.4);
+  color: #e3b341;
+}

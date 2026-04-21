@@ -1,0 +1,215 @@
+/* ── Gear toggle button ───────────────────────────────────────────────────── */
+.gs-toggle-btn {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  z-index: 30;
+  width: 34px;
+  height: 34px;
+  background: #161b22;
+  border: 1px solid #30363d;
+  border-radius: 6px;
+  color: #8b949e;
+  font-size: 16px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s, color 0.15s;
+}
+.gs-toggle-btn:hover {
+  background: #1f2937;
+  color: #c9d1d9;
+}
+
+/* ── Drawer ───────────────────────────────────────────────────────────────── */
+.gs-drawer {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 260px;
+  background: #0d1117;
+  border-left: 1px solid #21262d;
+  z-index: 20;
+  overflow-y: auto;
+  transform: translateX(100%);
+  transition: transform 0.2s ease;
+  display: flex;
+  flex-direction: column;
+}
+.gs-drawer--open {
+  transform: translateX(0);
+}
+
+/* ── Header inside drawer ─────────────────────────────────────────────────── */
+.gs-header {
+  padding: 14px 14px 8px;
+  border-bottom: 1px solid #21262d;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.gs-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: #e6edf3;
+}
+.gs-counts {
+  font-size: 11px;
+  color: #8b949e;
+}
+
+/* ── Section ──────────────────────────────────────────────────────────────── */
+.gs-section {
+  border-bottom: 1px solid #21262d;
+}
+.gs-section-header {
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 9px 14px;
+  background: none;
+  border: none;
+  color: #8b949e;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  cursor: pointer;
+  transition: color 0.1s;
+}
+.gs-section-header:hover { color: #c9d1d9; }
+.gs-chevron { font-size: 10px; }
+.gs-section-body {
+  padding: 4px 14px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* ── Common label ─────────────────────────────────────────────────────────── */
+.gs-label {
+  font-size: 11px;
+  color: #8b949e;
+  min-width: 80px;
+}
+
+/* ── Slider row ───────────────────────────────────────────────────────────── */
+.gs-slider-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: default;
+}
+.gs-range {
+  flex: 1;
+  accent-color: #58a6ff;
+  height: 3px;
+  cursor: pointer;
+}
+.gs-value {
+  font-size: 11px;
+  color: #c9d1d9;
+  min-width: 38px;
+  text-align: right;
+}
+
+/* ── Toggle row ───────────────────────────────────────────────────────────── */
+.gs-toggle-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: default;
+}
+.gs-switch {
+  width: 32px;
+  height: 18px;
+  border-radius: 9px;
+  background: #30363d;
+  border: none;
+  position: relative;
+  cursor: pointer;
+  transition: background 0.2s;
+  flex-shrink: 0;
+}
+.gs-switch::after {
+  content: '';
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  background: #8b949e;
+  border-radius: 50%;
+  top: 3px;
+  left: 3px;
+  transition: transform 0.2s, background 0.2s;
+}
+.gs-switch.on {
+  background: #1f6feb;
+}
+.gs-switch.on::after {
+  transform: translateX(14px);
+  background: #ffffff;
+}
+
+/* ── Radio group ──────────────────────────────────────────────────────────── */
+.gs-radio-group {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+.gs-radio-options {
+  display: flex;
+  gap: 5px;
+  flex-wrap: wrap;
+}
+.gs-radio-btn {
+  padding: 3px 10px;
+  border-radius: 4px;
+  border: 1px solid #30363d;
+  background: transparent;
+  color: #8b949e;
+  font-size: 11px;
+  cursor: pointer;
+  transition: background 0.1s, color 0.1s, border-color 0.1s;
+}
+.gs-radio-btn:hover { background: #161b22; color: #c9d1d9; }
+.gs-radio-btn.active {
+  background: #1f6feb22;
+  border-color: #58a6ff;
+  color: #58a6ff;
+}
+
+/* ── Search row ───────────────────────────────────────────────────────────── */
+.gs-search-row {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.gs-search-input {
+  background: #161b22;
+  border: 1px solid #30363d;
+  border-radius: 4px;
+  color: #c9d1d9;
+  font-size: 12px;
+  padding: 5px 8px;
+  outline: none;
+  transition: border-color 0.15s;
+}
+.gs-search-input:focus { border-color: #58a6ff; }
+.gs-search-input::placeholder { color: #484f58; }
+
+/* ── Backdrop (mobile) ────────────────────────────────────────────────────── */
+.gs-backdrop {
+  display: none;
+}
+@media (max-width: 640px) {
+  .gs-backdrop {
+    display: block;
+    position: absolute;
+    inset: 0;
+    background: rgba(0,0,0,0.5);
+    z-index: 15;
+  }
+}

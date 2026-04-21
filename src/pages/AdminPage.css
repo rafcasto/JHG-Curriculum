@@ -1,0 +1,222 @@
+/* ── Page shell ───────────────────────────────────────────────────────────── */
+.admin-page {
+  padding: 2rem 2.5rem;
+  max-width: 900px;
+  color: #e6edf3;
+}
+
+.admin-title {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #e6edf3;
+  margin: 0 0 2rem;
+}
+
+/* ── Sections ─────────────────────────────────────────────────────────────── */
+.admin-section {
+  margin-bottom: 2.5rem;
+}
+
+.admin-section-title {
+  font-size: 0.875rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #8b949e;
+  margin: 0 0 1rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid #21262d;
+}
+
+/* ── Add user form ────────────────────────────────────────────────────────── */
+.admin-form-row {
+  display: flex;
+  gap: 0.625rem;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.admin-input,
+.admin-select {
+  background: #0d1117;
+  border: 1px solid #30363d;
+  border-radius: 6px;
+  color: #e6edf3;
+  font-size: 0.875rem;
+  padding: 0.45rem 0.75rem;
+  outline: none;
+  transition: border-color 0.15s;
+}
+
+.admin-input {
+  flex: 1;
+  min-width: 180px;
+}
+
+.admin-input:focus,
+.admin-select:focus {
+  border-color: #58a6ff;
+  box-shadow: 0 0 0 3px rgba(88, 166, 255, 0.15);
+}
+
+.admin-select {
+  background-image: none;
+  cursor: pointer;
+}
+
+.admin-form-error {
+  color: #f85149;
+  font-size: 0.8125rem;
+  margin: 0.5rem 0 0;
+}
+
+/* ── Buttons ──────────────────────────────────────────────────────────────── */
+.admin-btn {
+  border-radius: 6px;
+  border: 1px solid transparent;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  padding: 0.45rem 0.875rem;
+  cursor: pointer;
+  transition: background 0.15s, opacity 0.15s;
+  white-space: nowrap;
+}
+
+.admin-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.admin-btn--primary {
+  background: #238636;
+  border-color: rgba(240, 246, 252, 0.1);
+  color: #fff;
+}
+
+.admin-btn--primary:hover:not(:disabled) {
+  background: #2ea043;
+}
+
+.admin-btn--danger {
+  background: none;
+  border-color: #f8514933;
+  color: #f85149;
+}
+
+.admin-btn--danger:hover:not(:disabled) {
+  background: rgba(248, 81, 73, 0.1);
+  border-color: #f85149;
+}
+
+/* ── Error / loading ──────────────────────────────────────────────────────── */
+.admin-error {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  color: #f85149;
+  font-size: 0.875rem;
+  margin-bottom: 1rem;
+}
+
+.admin-retry-btn {
+  background: none;
+  border: 1px solid #30363d;
+  border-radius: 6px;
+  color: #8b949e;
+  font-size: 0.8125rem;
+  padding: 0.2rem 0.625rem;
+  cursor: pointer;
+}
+
+.admin-loading {
+  display: flex;
+  justify-content: center;
+  padding: 2rem;
+}
+
+/* ── Table ────────────────────────────────────────────────────────────────── */
+.admin-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+}
+
+.admin-table thead th {
+  text-align: left;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #8b949e;
+  padding: 0.5rem 0.875rem;
+  border-bottom: 1px solid #21262d;
+}
+
+.admin-table tbody tr {
+  border-bottom: 1px solid #161b22;
+  transition: background 0.1s;
+}
+
+.admin-table tbody tr:hover {
+  background: #161b22;
+}
+
+.admin-table-row--self {
+  background: rgba(88, 166, 255, 0.04);
+}
+
+.admin-table tbody td {
+  padding: 0.625rem 0.875rem;
+  vertical-align: middle;
+  color: #c9d1d9;
+}
+
+.admin-td-email {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-family: 'SF Mono', 'Fira Code', monospace;
+  font-size: 0.8125rem;
+}
+
+.admin-self-badge {
+  background: rgba(88, 166, 255, 0.15);
+  border: 1px solid rgba(88, 166, 255, 0.3);
+  border-radius: 10px;
+  color: #58a6ff;
+  font-family: inherit;
+  font-size: 0.7rem;
+  font-weight: 600;
+  padding: 0.1rem 0.45rem;
+}
+
+.admin-select--inline {
+  padding: 0.2rem 0.5rem;
+  font-size: 0.8125rem;
+}
+
+.admin-td-date {
+  color: #8b949e;
+  font-size: 0.8125rem;
+  white-space: nowrap;
+}
+
+.admin-empty {
+  color: #8b949e;
+  text-align: center;
+  padding: 2rem;
+}
+
+/* Spinner (reuse app-wide pattern) */
+.spinner {
+  width: 28px;
+  height: 28px;
+  border: 2px solid #21262d;
+  border-top-color: #58a6ff;
+  border-radius: 50%;
+  animation: spin 0.65s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}

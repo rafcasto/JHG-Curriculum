@@ -1,0 +1,151 @@
+.table-view {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  background: #0d1117;
+  color: #e6edf3;
+  overflow: hidden;
+  min-height: 0;
+}
+
+/* ── Filters bar ── */
+.table-filters {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 1.25rem;
+  background: #161b22;
+  border-bottom: 1px solid #30363d;
+  flex-shrink: 0;
+}
+
+.table-filters select {
+  background: #0d1117;
+  color: #c9d1d9;
+  border: 1px solid #30363d;
+  border-radius: 6px;
+  padding: 0.35rem 0.6rem;
+  font-size: 0.8rem;
+  cursor: pointer;
+  font-family: inherit;
+  outline: none;
+  transition: border-color 0.15s;
+}
+
+.table-filters select:hover,
+.table-filters select:focus {
+  border-color: #58a6ff;
+}
+
+.table-count {
+  margin-left: auto;
+  font-size: 0.75rem;
+  color: #8b949e;
+}
+
+/* ── Scrollable table container ── */
+.table-scroll {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: auto;
+}
+
+/* ── Table ── */
+.table-main {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+}
+
+.table-main thead {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: #161b22;
+}
+
+.table-main th {
+  text-align: left;
+  padding: 0.6rem 1.25rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #8b949e;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  border-bottom: 1px solid #30363d;
+  white-space: nowrap;
+}
+
+.table-main tbody tr {
+  cursor: pointer;
+  border-bottom: 1px solid #21262d;
+  transition: background 0.1s;
+}
+
+.table-main tbody tr:hover {
+  background: #161b22;
+}
+
+.table-main td {
+  padding: 0.6rem 1.25rem;
+  vertical-align: middle;
+  color: #c9d1d9;
+}
+
+/* ── Column widths ── */
+.col-name {
+  width: 45%;
+  font-weight: 500;
+  color: #58a6ff;
+}
+
+.col-name:hover {
+  text-decoration: underline;
+}
+
+.col-tag {
+  width: 20%;
+}
+
+.col-asset {
+  width: 35%;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+  align-items: center;
+}
+
+/* ── Pills ── */
+.tag-pill {
+  display: inline-block;
+  background: rgba(88, 166, 255, 0.12);
+  color: #58a6ff;
+  border: 1px solid rgba(88, 166, 255, 0.25);
+  border-radius: 4px;
+  padding: 0.15rem 0.5rem;
+  font-size: 0.75rem;
+  text-transform: capitalize;
+  white-space: nowrap;
+}
+
+.asset-pill {
+  display: inline-block;
+  background: rgba(63, 185, 80, 0.1);
+  color: #3fb950;
+  border: 1px solid rgba(63, 185, 80, 0.2);
+  border-radius: 4px;
+  padding: 0.15rem 0.5rem;
+  font-size: 0.75rem;
+  white-space: nowrap;
+}
+
+.empty-cell {
+  color: #484f58;
+}
+
+/* ── Empty state ── */
+.empty-state {
+  text-align: center;
+  color: #8b949e;
+  padding: 3rem 1.25rem;
+}
