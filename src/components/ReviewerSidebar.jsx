@@ -14,6 +14,20 @@ function submissionStatus(submission) {
   return 'in_progress';
 }
 
+/** Extract the top-level folder name from a Drive path like "1. focus/Lesson Name" */
+function getFolder(drivePath) {
+  if (!drivePath) return 'Other';
+  const segment = drivePath.split('/')[0].trim();
+  return segment || 'Other';
+}
+
+function folderLabel(key) {
+  return key
+    .split(' ')
+    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+    .join(' ');
+}
+
 /**
  * Props:
  *   documents   — array of reviewer-assigned documents from /api/documents
@@ -34,7 +48,7 @@ export default function ReviewerSidebar({ documents = [], submissions = {}, load
 
     const groups = {};
     filtered.forEach((d) => {
-      const key = d.category ?? 'Uncategorized';
+      const key = getFolder(d.drivePath);
       if (!groups[key]) groups[key] = [];
       groups[key].push(d);
     });
@@ -47,7 +61,7 @@ export default function ReviewerSidebar({ documents = [], submissions = {}, load
   }, [documents, search]);
 
   const sortedGroups = Object.keys(grouped).sort((a, b) =>
-    a === 'Uncategorized' ? 1 : b === 'Uncategorized' ? -1 : a.localeCompare(b)
+    a === 'Other' ? 1 : b === 'Other' ? -1 : a.localeCompare(b)
   );
 
   function toggle(key) {
@@ -82,7 +96,7 @@ export default function ReviewerSidebar({ documents = [], submissions = {}, load
           <div key={key} className="rsb-group">
             <button className="rsb-group-header" onClick={() => toggle(key)}>
               <span className={`rsb-chevron${collapsed[key] ? '' : ' open'}`}>›</span>
-              <span className="rsb-group-name">{key}</span>
+              <span className="rsb-group-name">{folderLabel(key)}</span>
               <span className="rsb-group-count">{grouped[key].length}</span>
             </button>
 

@@ -41,13 +41,32 @@ export default function AppLayout() {
     setReviewLoading(true);
     try {
       const token = await user.getIdToken();
-      const docsRes = await fetch(
-        `/api/documents?workspaceId=${encodeURIComponent(currentWorkspace.id)}`,
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
+
+      // Fetch assigned docs and Drive file list in parallel
+      const [docsRes, driveFiles] = await Promise.all([
+        fetch(
+          `/api/documents?workspaceId=${encodeURIComponent(currentWorkspace.id)}`,
+          { headers: { Authorization: `Bearer ${token}` } }
+        ),
+        fetchAllDocuments(currentWorkspace?.driveFolderId ?? null).catch(() => []),
+      ]);
+
       if (!docsRes.ok) return;
       const docs = await docsRes.json();
-      setReviewDocs(docs);
+
+      // Build driveFileId → path map so we can group by folder (module) like editors
+      const pathMap = {};
+      for (const f of driveFiles) {
+        pathMap[f.id] = f.path ?? '';
+      }
+
+      // Enrich each reviewer doc with its Drive path
+      const enrichedDocs = docs.map((d) => ({
+        ...d,
+        drivePath: pathMap[d.driveFileId] ?? '',
+      }));
+
+      setReviewDocs(enrichedDocs);
 
       const subResults = await Promise.allSettled(
         docs.map(async (doc) => {

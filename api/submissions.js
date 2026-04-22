@@ -291,8 +291,13 @@ export default async function handler(req, res) {
       }));
 
       // Update submission and scores/documentId atomically
+      const scoresRef = db.collection('scores').doc(submission.documentId);
+
       await db.runTransaction(async (tx) => {
-        // Update submission to complete
+        // ── All reads first ──────────────────────────────────────────────
+        const scoresSnap = await tx.get(scoresRef);
+
+        // ── All writes after reads ───────────────────────────────────────
         const submissionUpdate = {
           status: 'complete',
           responses: normalisedResponses,
@@ -308,10 +313,6 @@ export default async function handler(req, res) {
           submissionUpdate.reviewDuration = Math.round(reviewDuration);
         }
         tx.update(submissionRef, submissionUpdate);
-
-        // Update aggregate scores document
-        const scoresRef = db.collection('scores').doc(submission.documentId);
-        const scoresSnap = await tx.get(scoresRef);
 
         if (!scoresSnap.exists) {
           const bucket = getDistributionBucket(contentQualityScore);

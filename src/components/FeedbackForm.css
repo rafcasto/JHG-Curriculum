@@ -113,8 +113,9 @@
 
 .ff-stars {
   display: flex;
-  flex-direction: column;
-  gap: 0.3rem;
+  flex-direction: row;
+  align-items: center;
+  gap: 0.1rem;
 }
 
 .ff-star {
