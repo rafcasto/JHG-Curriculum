@@ -16,6 +16,25 @@ const drive = google.drive({ version: 'v3', auth: driveAuth });
 export default async function handler(req, res) {
   if (req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed' });
 
+  // ?id=<folderId> — look up a single folder's name
+  const lookupId = req.query?.id;
+  if (lookupId) {
+    if (!/^[a-zA-Z0-9_-]{10,}$/.test(lookupId)) {
+      return res.status(400).json({ error: 'Invalid folder id' });
+    }
+    try {
+      const file = await drive.files.get({
+        fileId: lookupId,
+        fields: 'id, name',
+        supportsAllDrives: true,
+      });
+      return res.json({ id: file.data.id, name: file.data.name });
+    } catch (e) {
+      console.error('[api/folders lookup]', e.message);
+      return res.status(404).json({ error: 'Folder not found' });
+    }
+  }
+
   const folderId = process.env.GOOGLE_DRIVE_FOLDER_ID;
   if (!folderId) {
     return res.status(500).json({ error: 'GOOGLE_DRIVE_FOLDER_ID not configured' });

@@ -15,6 +15,48 @@ function WorkspacesSection({ users, getToken }) {
   const [wsError, setWsError] = useState(null);
   const [expanded, setExpanded] = useState({}); // workspaceId -> boolean
   const [addUserSel, setAddUserSel] = useState({}); // workspaceId -> uid
+  const [folderLookupLoading, setFolderLookupLoading] = useState(false);
+  const [syncingId, setSyncingId] = useState(null); // workspace id being synced
+
+  // When a folder ID is entered in the create form, auto-fetch its Drive name
+  useEffect(() => {
+    const id = wsForm.driveFolderId.trim();
+    if (!/^[a-zA-Z0-9_-]{10,}$/.test(id)) return;
+    // Only auto-fill name if user hasn't typed one
+    if (wsForm.name) return;
+    setFolderLookupLoading(true);
+    fetch(`/api/folders?id=${encodeURIComponent(id)}`)
+      .then((r) => r.json())
+      .then((data) => {
+        if (data.name) setWsForm((f) => ({ ...f, name: f.name || data.name }));
+      })
+      .catch(() => {})
+      .finally(() => setFolderLookupLoading(false));
+  }, [wsForm.driveFolderId]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  async function handleSyncName(workspace) {
+    setSyncingId(workspace.id);
+    try {
+      const res = await fetch(`/api/folders?id=${encodeURIComponent(workspace.driveFolderId)}`);
+      const data = await res.json();
+      if (!res.ok || !data.name) throw new Error(data.error ?? 'Folder not found');
+      const token = await getToken();
+      const patch = await fetch(`/api/workspaces?id=${encodeURIComponent(workspace.id)}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ name: data.name }),
+      });
+      if (!patch.ok) {
+        const b = await patch.json().catch(() => ({}));
+        throw new Error(b.error ?? 'Update failed');
+      }
+      await refreshWorkspaces();
+    } catch (e) {
+      setWsError(e.message);
+    } finally {
+      setSyncingId(null);
+    }
+  }
 
   async function handleCreateWorkspace(e) {
     e.preventDefault();
@@ -106,23 +148,27 @@ function WorkspacesSection({ users, getToken }) {
       {/* Create workspace form */}
       <form className="admin-form" onSubmit={handleCreateWorkspace}>
         <div className="admin-form-row">
-          <input
-            className="admin-input"
-            type="text"
-            placeholder="Workspace name"
-            value={wsForm.name}
-            onChange={(e) => setWsForm((f) => ({ ...f, name: e.target.value }))}
-            required
-          />
-          <input
-            className="admin-input"
-            type="text"
-            placeholder="Google Drive folder ID"
-            value={wsForm.driveFolderId}
-            onChange={(e) => setWsForm((f) => ({ ...f, driveFolderId: e.target.value }))}
-            required
-          />
-          <button className="admin-btn admin-btn--primary" type="submit" disabled={wsFormLoading}>
+          <div className="admin-input-wrap">
+            <input
+              className="admin-input"
+              type="text"
+              placeholder="Google Drive folder ID"
+              value={wsForm.driveFolderId}
+              onChange={(e) => setWsForm((f) => ({ ...f, driveFolderId: e.target.value, name: '' }))}
+              required
+            />
+          </div>
+          <div className="admin-input-wrap">
+            <input
+              className="admin-input"
+              type="text"
+              placeholder={folderLookupLoading ? 'Fetching name from Drive…' : 'Workspace name'}
+              value={wsForm.name}
+              onChange={(e) => setWsForm((f) => ({ ...f, name: e.target.value }))}
+              required
+            />
+          </div>
+          <button className="admin-btn admin-btn--primary" type="submit" disabled={wsFormLoading || folderLookupLoading}>
             {wsFormLoading ? 'Creating…' : 'Create Workspace'}
           </button>
         </div>
@@ -176,6 +222,14 @@ function WorkspacesSection({ users, getToken }) {
                     </span>
                   </div>
                   <div className="ws-card-actions">
+                    <button
+                      className="admin-btn admin-btn--secondary"
+                      disabled={syncingId === ws.id}
+                      onClick={() => handleSyncName(ws)}
+                      title="Sync workspace name from Google Drive folder"
+                    >
+                      {syncingId === ws.id ? 'Syncing…' : 'Sync Name'}
+                    </button>
                     <button
                       className="admin-btn admin-btn--secondary"
                       onClick={() => setExpanded((prev) => ({ ...prev, [ws.id]: !isOpen }))}

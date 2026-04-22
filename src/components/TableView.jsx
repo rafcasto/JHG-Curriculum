@@ -2,19 +2,6 @@ import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import './TableView.css';
 
-const TAG_FILTER_OPTIONS = [
-  { label: 'All Tags', value: '' },
-  { label: 'Preparation', value: '0. preparation' },
-  { label: 'Focus', value: '1. focus' },
-  { label: 'Value', value: '2. value' },
-  { label: 'Profile', value: '3. profile' },
-  { label: 'Applications', value: '4. applications' },
-  { label: 'Network', value: '5. network' },
-  { label: 'Interviews', value: '6. interviews' },
-  { label: 'Deal', value: '7. deal' },
-  { label: 'Other', value: 'other' },
-];
-
 const ASSET_FILTER_OPTIONS = [
   { label: 'All Asset Types', value: '' },
   { label: 'Infographic', value: 'Infographic' },
@@ -41,25 +28,38 @@ function normalizeCategory(cat) {
 
 export default function TableView({ nodes }) {
   const navigate = useNavigate();
-  const [tagFilter, setTagFilter] = useState('');
+  const [stepFilter, setStepFilter] = useState('');
   const [assetFilter, setAssetFilter] = useState('');
+
+  // Derive unique step values from actual document tags
+  const stepOptions = useMemo(() => {
+    const all = (nodes ?? [])
+      .filter((n) => !n.isTagNode)
+      .flatMap((n) => n.tags ?? []);
+    const unique = [...new Set(all)].sort();
+    return unique;
+  }, [nodes]);
 
   const rows = useMemo(() => {
     return (nodes ?? [])
       .filter((n) => !n.isTagNode)
-      .filter((n) => !tagFilter || n.module === tagFilter)
+      .filter((n) => {
+        if (!stepFilter) return true;
+        return (n.tags ?? []).includes(stepFilter);
+      })
       .filter((n) => {
         if (!assetFilter) return true;
         return (n.categories ?? []).some((c) => normalizeCategory(c) === assetFilter);
       });
-  }, [nodes, tagFilter, assetFilter]);
+  }, [nodes, stepFilter, assetFilter]);
 
   return (
     <div className="table-view">
       <div className="table-filters">
-        <select value={tagFilter} onChange={(e) => setTagFilter(e.target.value)}>
-          {TAG_FILTER_OPTIONS.map((o) => (
-            <option key={o.value} value={o.value}>{o.label}</option>
+        <select value={stepFilter} onChange={(e) => setStepFilter(e.target.value)}>
+          <option value="">All Steps</option>
+          {stepOptions.map((s) => (
+            <option key={s} value={s}>{s}</option>
           ))}
         </select>
         <select value={assetFilter} onChange={(e) => setAssetFilter(e.target.value)}>
@@ -75,7 +75,7 @@ export default function TableView({ nodes }) {
           <thead>
             <tr>
               <th>File Name</th>
-              <th>Tag</th>
+              <th>Step</th>
               <th>Asset Type</th>
             </tr>
           </thead>
@@ -84,13 +84,14 @@ export default function TableView({ nodes }) {
               const assetTypes = (n.categories ?? [])
                 .map(normalizeCategory)
                 .filter(Boolean);
+              const steps = n.tags ?? [];
               return (
                 <tr key={n.id} onClick={() => navigate(`/file/${n.id}`)}>
                   <td className="col-name">{n.title}</td>
                   <td className="col-tag">
-                    <span className="tag-pill">
-                      {n.module.replace(/^\d+\.\s+/, '')}
-                    </span>
+                    {steps.length > 0
+                      ? steps.map((s) => <span key={s} className="tag-pill">{s}</span>)
+                      : <span className="empty-cell">—</span>}
                   </td>
                   <td className="col-asset">
                     {assetTypes.length > 0

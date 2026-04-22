@@ -208,6 +208,7 @@ async function buildGraph(folderId) {
       type: inferType(title, f.path),
       module: inferModule(f.path),
       categories,          // e.g. ["Lesson/Text"] or ["Homework/3-AI-Prompt"]
+      tags: moduleTags.map((t) => t.replace(/^Module\//, '')), // e.g. ["1-Focus", "3-Profile"]
     });
 
     nodeModuleTags.set(f.id, moduleTags);
