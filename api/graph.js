@@ -27,7 +27,8 @@ const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
 function inferModule(path) {
-  return path ? (path.split('/')[0] || 'other') : 'other';
+  if (!path || !path.includes('/')) return 'other';
+  return path.split('/')[0];
 }
 
 function inferType(title, path) {

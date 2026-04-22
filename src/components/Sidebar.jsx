@@ -5,7 +5,9 @@ import { createDocument } from '../hooks/useDocuments';
 import './Sidebar.css';
 
 function getModule(doc) {
-  return (doc.path ?? '').split('/')[0] || 'other';
+  const p = doc.path ?? '';
+  if (!p.includes('/')) return 'other';
+  return p.split('/')[0];
 }
 
 /** Infer a document type from its title/path when frontMatter is unavailable */
