@@ -1,3 +1,98 @@
+/* ── Loading / error states ──────────────────────────────────────────────── */
+.rv-loading,
+.rv-error {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  color: #8b949e;
+}
+
+.rv-spinner {
+  width: 28px;
+  height: 28px;
+  border: 3px solid #30363d;
+  border-top-color: #58a6ff;
+  border-radius: 50%;
+  animation: rv-spin 0.75s linear infinite;
+}
+
+@keyframes rv-spin {
+  to { transform: rotate(360deg); }
+}
+
+/* ── TOC page ─────────────────────────────────────────────────────────────── */
+.rv-toc-page {
+  flex: 1;
+  overflow-y: auto;
+  padding: 2rem 2.5rem;
+  color: #e6edf3;
+}
+
+.rv-toc-workspace {
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: #484f58;
+  background: #161b22;
+  border: 1px solid #30363d;
+  border-radius: 20px;
+  display: inline-block;
+  padding: 0.2rem 0.65rem;
+  margin-bottom: 2rem;
+}
+
+.rv-toc-section {
+  margin-bottom: 2rem;
+}
+
+.rv-toc-folder {
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #8b949e;
+  margin: 0 0 0.5rem;
+  padding-bottom: 0.4rem;
+  border-bottom: 1px solid #21262d;
+}
+
+.rv-toc-files {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.rv-toc-files li {
+  border-bottom: 1px solid #161b22;
+}
+
+.rv-toc-files li:last-child {
+  border-bottom: none;
+}
+
+.rv-toc-file-link {
+  display: block;
+  width: 100%;
+  text-align: left;
+  background: none;
+  border: none;
+  padding: 0.5rem 0.25rem;
+  font-size: 0.9375rem;
+  color: #e6edf3;
+  cursor: pointer;
+  border-radius: 4px;
+  transition: color 0.12s, background 0.12s;
+  line-height: 1.4;
+}
+
+.rv-toc-file-link:hover {
+  color: #58a6ff;
+  background: #161b22;
+  padding-left: 0.5rem;
+}
+
 /* ── Welcome state ───────────────────────────────────────────────────────── */
 .rv-welcome {
   flex: 1;
