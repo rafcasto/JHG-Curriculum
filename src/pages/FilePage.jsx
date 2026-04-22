@@ -332,22 +332,13 @@ export default function FilePage() {
           <span className="readonly-badge">Read-only</span>
         )}
         {canEdit && (
-          <div className="file-export-actions">
-            <button
-              className="export-btn"
-              onClick={() => window.print()}
-              title="Print document"
-            >
-              ⎙ Print
-            </button>
-            <button
-              className="export-btn"
-              onClick={() => window.print()}
-              title="Download as PDF via print dialog"
-            >
-              ↓ PDF
-            </button>
-          </div>
+          <button
+            className="export-btn"
+            onClick={() => window.print()}
+            title="Print document"
+          >
+            ⎙ Print
+          </button>
         )}
 
         {/* Reviewer: timer + stop while actively reviewing */}
