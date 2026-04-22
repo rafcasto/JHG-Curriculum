@@ -7,6 +7,8 @@ import { fetchDocument, saveDocument, deleteDocument } from '../hooks/useDocumen
 import RichTextEditor from '../components/RichTextEditor';
 import GraphView, { DEFAULT_SETTINGS } from '../components/GraphView';
 import TableOfContents from '../components/TableOfContents';
+import WarmupQuestion from '../components/WarmupQuestion';
+import FeedbackForm from '../components/FeedbackForm';
 import './FilePage.css';
 
 /** Convert heading text to a URL-safe id for anchor links. */
@@ -63,6 +65,10 @@ export default function FilePage() {
   const readOnly = doc?.readOnly ?? false;
   const canEdit = role === 'admin' || role === 'editor';
 
+  // Reviewer feedback state
+  const [submission, setSubmission] = useState(null);
+  const [submissionChecked, setSubmissionChecked] = useState(false);
+
   // Scroll container ref for the TOC intersection observer
   const scrollRef = useRef(null);
 
@@ -88,6 +94,8 @@ export default function FilePage() {
     setError(null);
     setMode('preview');
     setDirty(false);
+    setSubmission(null);
+    setSubmissionChecked(false);
     fetchDocument(id)
       .then((data) => {
         if (!data) {
@@ -100,6 +108,31 @@ export default function FilePage() {
       .catch((e) => setError(e.message))
       .finally(() => setLoading(false));
   }, [id]);
+
+  // For reviewer: check for an existing submission when doc is loaded
+  useEffect(() => {
+    if (role !== 'reviewer' || !id || !user) return;
+    let cancelled = false;
+    async function checkSubmission() {
+      try {
+        const token = await user.getIdToken();
+        const res = await fetch(
+          `/api/submissions?documentId=${encodeURIComponent(id)}`,
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+        if (res.ok) {
+          const data = await res.json();
+          if (!cancelled) setSubmission(data);
+        }
+      } catch {
+        // no existing submission is fine
+      } finally {
+        if (!cancelled) setSubmissionChecked(true);
+      }
+    }
+    checkSubmission();
+    return () => { cancelled = true; };
+  }, [role, id, user]);
 
   const handleSave = useCallback(async () => {
     if (!doc || saving) return;
@@ -165,6 +198,16 @@ export default function FilePage() {
 
   return (
     <div className="file-page">
+      {/* Warm-up question — reviewer only, shown until submission is complete */}
+      {role === 'reviewer' && submissionChecked && submission?.status !== 'complete' && (
+        <WarmupQuestion
+          documentId={id}
+          user={user}
+          submission={submission}
+          onSubmitted={setSubmission}
+        />
+      )}
+
       {/* Top bar */}
       <div className="file-topbar">
         <div className="file-topbar-left">
@@ -296,6 +339,16 @@ export default function FilePage() {
           />
         )}
       </div>
+
+      {/* Post-reading feedback form — reviewer only, shown after warm-up */}
+      {role === 'reviewer' && submission?.status === 'draft' && (
+        <FeedbackForm
+          documentId={id}
+          user={user}
+          submission={submission}
+          onSubmitted={setSubmission}
+        />
+      )}
     </div>
   );
 }

@@ -10,6 +10,49 @@
 import { google } from 'googleapis';
 import matter from 'gray-matter';
 import { basename } from 'path';
+import { initializeApp, cert, getApps, getApp } from 'firebase-admin/app';
+
+const serviceAccount = {
+  type: process.env.GOOGLE_TYPE,
+  project_id: process.env.GOOGLE_PROJECT_ID,
+  private_key_id: process.env.GOOGLE_PRIVATE_KEY_ID,
+  private_key: process.env.GOOGLE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
+  client_email: process.env.GOOGLE_CLIENT_EMAIL,
+  client_id: process.env.GOOGLE_CLIENT_ID,
+  auth_uri: process.env.GOOGLE_AUTH_URI,
+  token_uri: process.env.GOOGLE_TOKEN_URI,
+  auth_provider_x509_cert_url: process.env.GOOGLE_AUTH_PROVIDER_CERT_URL,
+  client_x509_cert_url: process.env.GOOGLE_CLIENT_CERT_URL,
+  universe_domain: process.env.GOOGLE_UNIVERSE_DOMAIN,
+};
+
+getApps().length === 0 ? initializeApp({ credential: cert(serviceAccount) }) : getApp();
+
+async function verifyTokenClaims(token) {
+  const apiKey = process.env.VITE_FIREBASE_API_KEY;
+  if (!apiKey) throw Object.assign(new Error('VITE_FIREBASE_API_KEY not set'), { status: 500 });
+  const res = await fetch(
+    `https://identitytoolkit.googleapis.com/v1/accounts:lookup?key=${apiKey}`,
+    { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ idToken: token }) }
+  );
+  const data = await res.json();
+  if (!res.ok) throw Object.assign(new Error(data.error?.message ?? 'Token verification failed'), { status: 401 });
+  const user = data.users?.[0];
+  if (!user) throw Object.assign(new Error('User not found'), { status: 401 });
+  const customClaims = user.customAttributes ? JSON.parse(user.customAttributes) : {};
+  return { uid: user.localId, email: user.email, ...customClaims };
+}
+
+async function requireWriteAccess(req) {
+  const authHeader = req.headers['authorization'] ?? '';
+  const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : null;
+  if (!token) throw Object.assign(new Error('Authorization required'), { status: 401 });
+  const claims = await verifyTokenClaims(token);
+  if (claims.role === 'reviewer') {
+    throw Object.assign(new Error('Reviewers cannot modify files'), { status: 403 });
+  }
+  return claims;
+}
 
 const driveAuth = new google.auth.JWT({
   email: process.env.GOOGLE_CLIENT_EMAIL,
@@ -74,6 +117,7 @@ export default async function handler(req, res) {
 
   // ── PUT: write ─────────────────────────────────────────────────────────────
   if (req.method === 'PUT') {
+    try { await requireWriteAccess(req); } catch (e) { return res.status(e.status ?? 500).json({ error: e.message }); }
     try {
       const { content } = req.body ?? {};
       if (typeof content !== 'string') {
@@ -100,6 +144,7 @@ export default async function handler(req, res) {
 
   // ── POST: create new .md file ──────────────────────────────────────────────
   if (req.method === 'POST') {
+    try { await requireWriteAccess(req); } catch (e) { return res.status(e.status ?? 500).json({ error: e.message }); }
     const { folderId } = req.query;
     const { name } = req.body ?? {};
     if (!folderId) return res.status(400).json({ error: 'Missing ?folderId parameter' });
@@ -149,6 +194,7 @@ export default async function handler(req, res) {
 
   // ── DELETE: move file to trash ─────────────────────────────────────────────
   if (req.method === 'DELETE') {
+    try { await requireWriteAccess(req); } catch (e) { return res.status(e.status ?? 500).json({ error: e.message }); }
     if (!id) return res.status(400).json({ error: 'Missing ?id parameter' });
     try {
       // Refuse trashing Google Docs

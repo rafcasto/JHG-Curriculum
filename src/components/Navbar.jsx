@@ -30,7 +30,7 @@ export default function Navbar() {
   function handleWorkspaceSelect(ws) {
     setCurrentWorkspace(ws);
     setDropdownOpen(false);
-    navigate('/graph');
+    navigate(role === 'reviewer' ? '/review' : '/graph');
   }
 
   const workspaceLabel = currentWorkspace?.name ?? 'JHG Academy';
@@ -80,8 +80,14 @@ export default function Navbar() {
             Users
           </button>
         )}
+        {role === 'reviewer' && (
+          <button className="navbar-users-link" onClick={() => navigate('/review')}>
+            My Documents
+          </button>
+        )}
         {role === 'admin' && <span className="role-badge">Admin</span>}
         {role === 'editor' && <span className="role-badge role-badge--editor">Editor</span>}
+        {role === 'reviewer' && <span className="role-badge role-badge--reviewer">Reviewer</span>}
         <span className="navbar-email">{user?.email}</span>
         <button className="signout-btn" onClick={handleSignOut}>
           Sign out

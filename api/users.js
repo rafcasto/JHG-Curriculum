@@ -32,7 +32,7 @@ const adminApp = getApps().length === 0
 
 const adminAuth = getAuth(adminApp);
 
-const VALID_ROLES = ['admin', 'editor', 'viewer'];
+const VALID_ROLES = ['admin', 'editor', 'viewer', 'reviewer'];
 
 /**
  * Verify the Firebase ID token using the Firebase Auth REST API and return

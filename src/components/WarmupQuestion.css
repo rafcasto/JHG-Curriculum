@@ -1,0 +1,121 @@
+.warmup-container {
+  background: linear-gradient(135deg, rgba(88, 166, 255, 0.06) 0%, rgba(188, 140, 255, 0.06) 100%);
+  border-bottom: 1px solid rgba(88, 166, 255, 0.15);
+  padding: 1.5rem 1.75rem;
+  flex-shrink: 0;
+}
+
+.warmup-card {
+  max-width: 680px;
+}
+
+.warmup-header {
+  margin-bottom: 1rem;
+}
+
+.warmup-badge {
+  display: inline-block;
+  background: rgba(88, 166, 255, 0.12);
+  border: 1px solid rgba(88, 166, 255, 0.3);
+  border-radius: 12px;
+  color: #79b8ff;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  padding: 0.2rem 0.65rem;
+  margin-bottom: 0.6rem;
+  text-transform: uppercase;
+}
+
+.warmup-question {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #e6edf3;
+  margin: 0;
+  line-height: 1.4;
+}
+
+.warmup-options {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.warmup-option {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  background: rgba(22, 27, 34, 0.8);
+  border: 1px solid #30363d;
+  border-radius: 10px;
+  color: #e6edf3;
+  cursor: pointer;
+  padding: 0.625rem 0.875rem;
+  text-align: left;
+  transition: background 0.15s, border-color 0.15s;
+  flex: 1;
+  min-width: 180px;
+}
+
+.warmup-option:hover:not(:disabled) {
+  background: rgba(88, 166, 255, 0.08);
+  border-color: rgba(88, 166, 255, 0.35);
+}
+
+.warmup-option.selected,
+.warmup-option.selected:disabled {
+  background: rgba(88, 166, 255, 0.12);
+  border-color: rgba(88, 166, 255, 0.5);
+}
+
+.warmup-option:disabled {
+  cursor: default;
+}
+
+.warmup-options--done .warmup-option:not(.selected) {
+  opacity: 0.45;
+}
+
+.warmup-emoji {
+  font-size: 1.375rem;
+  flex-shrink: 0;
+  line-height: 1;
+}
+
+.warmup-option-text {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  flex: 1;
+}
+
+.warmup-option-label {
+  font-size: 0.875rem;
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+.warmup-option-desc {
+  font-size: 0.75rem;
+  color: #8b949e;
+  line-height: 1.3;
+}
+
+.warmup-check {
+  color: #58a6ff;
+  font-size: 0.875rem;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.warmup-done-msg {
+  font-size: 0.875rem;
+  color: #3fb950;
+  margin: 0.875rem 0 0;
+}
+
+.warmup-error {
+  font-size: 0.875rem;
+  color: #f85149;
+  margin: 0.875rem 0 0;
+}

@@ -92,6 +92,12 @@
   color: #e3b341;
 }
 
+.role-badge--reviewer {
+  background: rgba(188, 140, 255, 0.15);
+  border: 1px solid rgba(188, 140, 255, 0.4);
+  color: #bc8cff;
+}
+
 /* ── Workspace brand area ───────────────────────────────────────────────── */
 .navbar-brand-area {
   position: relative;

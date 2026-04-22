@@ -1,0 +1,40 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // All writes go through server-side Admin SDK which bypasses security rules.
+    // Client reads are locked down per collection below.
+
+    // questions — authenticated read (active only enforced in API); no direct client write
+    match /questions/{questionId} {
+      allow read: if request.auth != null;
+      allow write: if false;
+    }
+
+    // documents — authenticated read; no direct client write
+    match /documents/{documentId} {
+      allow read: if request.auth != null;
+      allow write: if false;
+    }
+
+    // workspaces — authenticated read; no direct client write
+    match /workspaces/{workspaceId} {
+      allow read: if request.auth != null;
+      allow write: if false;
+    }
+
+    // submissions — user can read own; admin reads all; no direct client write
+    match /submissions/{submissionId} {
+      allow read: if request.auth != null &&
+        (resource.data.userId == request.auth.uid || request.auth.token.role == 'admin');
+      allow write: if false;
+    }
+
+    // scores — authenticated read; no direct client write
+    match /scores/{documentId} {
+      allow read: if request.auth != null;
+      allow write: if false;
+    }
+
+  }
+}

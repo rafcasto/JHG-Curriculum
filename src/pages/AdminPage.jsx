@@ -2,9 +2,11 @@ import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useWorkspace } from '../contexts/WorkspaceContext';
 import { useNavigate } from 'react-router-dom';
+import QuestionManager from '../components/QuestionManager';
+import EarlyAccessManager from '../components/EarlyAccessManager';
 import './AdminPage.css';
 
-const ROLES = ['admin', 'editor', 'viewer'];
+const ROLES = ['admin', 'editor', 'viewer', 'reviewer'];
 
 // ── Workspace Management Section ────────────────────────────────────────────
 function WorkspacesSection({ users, getToken }) {
@@ -412,15 +414,47 @@ export default function AdminPage() {
     }
   }
 
+  const [activeTab, setActiveTab] = useState('workspaces');
+
   if (role && role !== 'admin') return null;
+
+  const tabs = [
+    { id: 'workspaces', label: 'Workspaces' },
+    { id: 'users', label: 'Users' },
+    { id: 'questions', label: 'Questions' },
+    { id: 'early-access', label: 'Early Access' },
+  ];
 
   return (
     <div className="admin-page">
       <h1 className="admin-title">Admin</h1>
 
-      {/* ── Workspaces ── */}
-      <WorkspacesSection users={users} getToken={getToken} />
+      <div className="admin-tabs">
+        {tabs.map((t) => (
+          <button
+            key={t.id}
+            className={`admin-tab${activeTab === t.id ? ' active' : ''}`}
+            onClick={() => setActiveTab(t.id)}
+          >
+            {t.label}
+          </button>
+        ))}
+      </div>
 
+      {activeTab === 'workspaces' && (
+        <WorkspacesSection users={users} getToken={getToken} />
+      )}
+
+      {activeTab === 'questions' && (
+        <QuestionManager getToken={getToken} />
+      )}
+
+      {activeTab === 'early-access' && (
+        <EarlyAccessManager getToken={getToken} />
+      )}
+
+      {activeTab === 'users' && (
+      <>
       {/* ── Add user form ── */}
       <section className="admin-section">
         <h2 className="admin-section-title">Add User</h2>
@@ -526,6 +560,8 @@ export default function AdminPage() {
           </table>
         )}
       </section>
+      </>
+      )}
     </div>
   );
 }
