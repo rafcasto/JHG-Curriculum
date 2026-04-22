@@ -64,7 +64,12 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const folderId = process.env.GOOGLE_DRIVE_FOLDER_ID;
+  // Accept a workspace-scoped folderId from the query string; validate its format.
+  const queryFolder = req.query?.folderId;
+  if (queryFolder !== undefined && !/^[a-zA-Z0-9_-]{10,}$/.test(queryFolder)) {
+    return res.status(400).json({ error: 'Invalid folderId' });
+  }
+  const folderId = queryFolder || process.env.GOOGLE_DRIVE_FOLDER_ID;
   if (!folderId) {
     return res.status(500).json({ error: 'GOOGLE_DRIVE_FOLDER_ID not configured' });
   }

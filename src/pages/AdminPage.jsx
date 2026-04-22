@@ -1,10 +1,231 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../contexts/AuthContext';
+import { useWorkspace } from '../contexts/WorkspaceContext';
 import { useNavigate } from 'react-router-dom';
 import './AdminPage.css';
 
 const ROLES = ['admin', 'editor', 'viewer'];
 
+// ── Workspace Management Section ────────────────────────────────────────────
+function WorkspacesSection({ users, getToken }) {
+  const { workspaces, refreshWorkspaces } = useWorkspace();
+  const [wsForm, setWsForm] = useState({ name: '', driveFolderId: '' });
+  const [wsFormError, setWsFormError] = useState(null);
+  const [wsFormLoading, setWsFormLoading] = useState(false);
+  const [wsError, setWsError] = useState(null);
+  const [expanded, setExpanded] = useState({}); // workspaceId -> boolean
+  const [addUserSel, setAddUserSel] = useState({}); // workspaceId -> uid
+
+  async function handleCreateWorkspace(e) {
+    e.preventDefault();
+    setWsFormError(null);
+    setWsFormLoading(true);
+    try {
+      const token = await getToken();
+      const res = await fetch('/api/workspaces', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify(wsForm),
+      });
+      const body = await res.json();
+      if (!res.ok) throw new Error(body.error ?? `Failed (${res.status})`);
+      setWsForm({ name: '', driveFolderId: '' });
+      await refreshWorkspaces();
+    } catch (e) {
+      setWsFormError(e.message);
+    } finally {
+      setWsFormLoading(false);
+    }
+  }
+
+  async function handleDeleteWorkspace(id, name) {
+    if (!window.confirm(`Delete workspace "${name}"? This cannot be undone.`)) return;
+    try {
+      const token = await getToken();
+      const res = await fetch(`/api/workspaces?id=${encodeURIComponent(id)}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body.error ?? 'Delete failed');
+      }
+      await refreshWorkspaces();
+    } catch (e) {
+      setWsError(e.message);
+    }
+  }
+
+  async function handleAddUser(workspaceId) {
+    const uid = addUserSel[workspaceId];
+    if (!uid) return;
+    try {
+      const token = await getToken();
+      const res = await fetch(`/api/workspaces?id=${encodeURIComponent(workspaceId)}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ addUser: uid }),
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body.error ?? 'Failed to add user');
+      }
+      setAddUserSel((prev) => ({ ...prev, [workspaceId]: '' }));
+      await refreshWorkspaces();
+    } catch (e) {
+      setWsError(e.message);
+    }
+  }
+
+  async function handleRemoveUser(workspaceId, uid) {
+    try {
+      const token = await getToken();
+      const res = await fetch(`/api/workspaces?id=${encodeURIComponent(workspaceId)}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ removeUser: uid }),
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body.error ?? 'Failed to remove user');
+      }
+      await refreshWorkspaces();
+    } catch (e) {
+      setWsError(e.message);
+    }
+  }
+
+  function emailForUid(uid) {
+    return users.find((u) => u.uid === uid)?.email ?? uid;
+  }
+
+  return (
+    <section className="admin-section">
+      <h2 className="admin-section-title">Workspaces</h2>
+
+      {/* Create workspace form */}
+      <form className="admin-form" onSubmit={handleCreateWorkspace}>
+        <div className="admin-form-row">
+          <input
+            className="admin-input"
+            type="text"
+            placeholder="Workspace name"
+            value={wsForm.name}
+            onChange={(e) => setWsForm((f) => ({ ...f, name: e.target.value }))}
+            required
+          />
+          <input
+            className="admin-input"
+            type="text"
+            placeholder="Google Drive folder ID"
+            value={wsForm.driveFolderId}
+            onChange={(e) => setWsForm((f) => ({ ...f, driveFolderId: e.target.value }))}
+            required
+          />
+          <button className="admin-btn admin-btn--primary" type="submit" disabled={wsFormLoading}>
+            {wsFormLoading ? 'Creating…' : 'Create Workspace'}
+          </button>
+        </div>
+        {wsFormError && <p className="admin-form-error">{wsFormError}</p>}
+      </form>
+
+      {wsError && <p className="admin-form-error" style={{ marginTop: '0.75rem' }}>{wsError}</p>}
+
+      {/* Workspace list */}
+      {workspaces.length === 0 ? (
+        <p className="admin-empty-msg">No workspaces yet. Create one above.</p>
+      ) : (
+        <div className="ws-list">
+          {workspaces.map((ws) => {
+            const isOpen = expanded[ws.id] ?? false;
+            const assignedUids = ws.userIds ?? [];
+            const unassigned = users.filter((u) => !assignedUids.includes(u.uid));
+
+            return (
+              <div key={ws.id} className="ws-card">
+                <div className="ws-card-header">
+                  <div className="ws-card-info">
+                    <span className="ws-card-name">{ws.name}</span>
+                    <span className="ws-card-folder">
+                      Drive: <code>{ws.driveFolderId}</code>
+                    </span>
+                    <span className="ws-card-count">
+                      {assignedUids.length} user{assignedUids.length !== 1 ? 's' : ''}
+                    </span>
+                  </div>
+                  <div className="ws-card-actions">
+                    <button
+                      className="admin-btn admin-btn--secondary"
+                      onClick={() => setExpanded((prev) => ({ ...prev, [ws.id]: !isOpen }))}
+                    >
+                      {isOpen ? 'Hide Users' : 'Manage Users'}
+                    </button>
+                    <button
+                      className="admin-btn admin-btn--danger"
+                      onClick={() => handleDeleteWorkspace(ws.id, ws.name)}
+                    >
+                      Delete
+                    </button>
+                  </div>
+                </div>
+
+                {isOpen && (
+                  <div className="ws-users-panel">
+                    {/* Assigned users */}
+                    {assignedUids.length === 0 ? (
+                      <p className="ws-no-users">No users assigned yet.</p>
+                    ) : (
+                      <ul className="ws-user-list">
+                        {assignedUids.map((uid) => (
+                          <li key={uid} className="ws-user-row">
+                            <span className="ws-user-email">{emailForUid(uid)}</span>
+                            <button
+                              className="admin-btn admin-btn--danger admin-btn--sm"
+                              onClick={() => handleRemoveUser(ws.id, uid)}
+                            >
+                              Remove
+                            </button>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+
+                    {/* Add user */}
+                    {unassigned.length > 0 && (
+                      <div className="ws-add-user-row">
+                        <select
+                          className="admin-select"
+                          value={addUserSel[ws.id] ?? ''}
+                          onChange={(e) =>
+                            setAddUserSel((prev) => ({ ...prev, [ws.id]: e.target.value }))
+                          }
+                        >
+                          <option value="">— Select user to add —</option>
+                          {unassigned.map((u) => (
+                            <option key={u.uid} value={u.uid}>{u.email}</option>
+                          ))}
+                        </select>
+                        <button
+                          className="admin-btn admin-btn--primary"
+                          disabled={!addUserSel[ws.id]}
+                          onClick={() => handleAddUser(ws.id)}
+                        >
+                          Add
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </section>
+  );
+}
+
+// ── Main Admin Page ──────────────────────────────────────────────────────────
 export default function AdminPage() {
   const { user, role } = useAuth();
   const navigate = useNavigate();
@@ -119,9 +340,12 @@ export default function AdminPage() {
 
   return (
     <div className="admin-page">
-      <h1 className="admin-title">User Management</h1>
+      <h1 className="admin-title">Admin</h1>
 
-      {/* Add user form */}
+      {/* ── Workspaces ── */}
+      <WorkspacesSection users={users} getToken={getToken} />
+
+      {/* ── Add user form ── */}
       <section className="admin-section">
         <h2 className="admin-section-title">Add User</h2>
         <form className="admin-form" onSubmit={handleAddUser}>
@@ -162,7 +386,7 @@ export default function AdminPage() {
         </form>
       </section>
 
-      {/* User list */}
+      {/* ── User list ── */}
       <section className="admin-section">
         <h2 className="admin-section-title">Users</h2>
 

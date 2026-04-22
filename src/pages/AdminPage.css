@@ -220,3 +220,128 @@
 @keyframes spin {
   to { transform: rotate(360deg); }
 }
+
+/* ── Workspace section ────────────────────────────────────────────────────── */
+.admin-btn--secondary {
+  background: none;
+  border-color: #30363d;
+  color: #8b949e;
+}
+
+.admin-btn--secondary:hover:not(:disabled) {
+  border-color: #58a6ff;
+  color: #58a6ff;
+}
+
+.admin-btn--sm {
+  padding: 0.25rem 0.6rem;
+  font-size: 0.75rem;
+}
+
+.admin-empty-msg {
+  color: #8b949e;
+  font-size: 0.875rem;
+  margin: 0.5rem 0 0;
+}
+
+.ws-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-top: 1.25rem;
+}
+
+.ws-card {
+  background: #0d1117;
+  border: 1px solid #21262d;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.ws-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.875rem 1rem;
+  flex-wrap: wrap;
+}
+
+.ws-card-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.ws-card-name {
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: #e6edf3;
+}
+
+.ws-card-folder {
+  font-size: 0.75rem;
+  color: #8b949e;
+}
+
+.ws-card-folder code {
+  font-family: 'SF Mono', 'Fira Code', monospace;
+  font-size: 0.75rem;
+  color: #58a6ff;
+}
+
+.ws-card-count {
+  font-size: 0.75rem;
+  color: #8b949e;
+}
+
+.ws-card-actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-shrink: 0;
+}
+
+.ws-users-panel {
+  border-top: 1px solid #21262d;
+  padding: 0.875rem 1rem;
+  background: #161b22;
+}
+
+.ws-no-users {
+  color: #8b949e;
+  font-size: 0.8125rem;
+  margin: 0 0 0.75rem;
+}
+
+.ws-user-list {
+  list-style: none;
+  margin: 0 0 0.75rem;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.ws-user-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.35rem 0.5rem;
+  background: #0d1117;
+  border: 1px solid #21262d;
+  border-radius: 6px;
+}
+
+.ws-user-email {
+  font-size: 0.8125rem;
+  font-family: 'SF Mono', 'Fira Code', monospace;
+  color: #c9d1d9;
+}
+
+.ws-add-user-row {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  flex-wrap: wrap;
+}

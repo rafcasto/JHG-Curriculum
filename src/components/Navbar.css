@@ -91,3 +91,85 @@
   border: 1px solid rgba(210, 153, 34, 0.4);
   color: #e3b341;
 }
+
+/* ── Workspace brand area ───────────────────────────────────────────────── */
+.navbar-brand-area {
+  position: relative;
+}
+
+.workspace-switcher {
+  position: relative;
+}
+
+.workspace-switcher-btn {
+  background: none;
+  border: none;
+  color: #e6edf3;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 1rem;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  padding: 0.25rem 0.4rem;
+  border-radius: 6px;
+  transition: background 0.15s, color 0.15s;
+}
+
+.workspace-switcher-btn:hover {
+  color: #58a6ff;
+  background: rgba(88, 166, 255, 0.08);
+}
+
+.workspace-name {
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.workspace-caret {
+  font-size: 0.7rem;
+  color: #8b949e;
+  margin-left: 0.1rem;
+}
+
+.workspace-dropdown {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  min-width: 200px;
+  background: #161b22;
+  border: 1px solid #30363d;
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+  overflow: hidden;
+  z-index: 100;
+  list-style: none;
+  margin: 0;
+  padding: 0.25rem 0;
+}
+
+.workspace-dropdown-item {
+  display: block;
+  width: 100%;
+  padding: 0.55rem 1rem;
+  background: none;
+  border: none;
+  color: #c9d1d9;
+  cursor: pointer;
+  font-size: 0.875rem;
+  text-align: left;
+  transition: background 0.12s, color 0.12s;
+}
+
+.workspace-dropdown-item:hover {
+  background: rgba(88, 166, 255, 0.1);
+  color: #e6edf3;
+}
+
+.workspace-dropdown-item.active {
+  color: #58a6ff;
+  font-weight: 600;
+}

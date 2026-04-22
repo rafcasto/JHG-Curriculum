@@ -1,5 +1,6 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
+import { WorkspaceProvider } from './contexts/WorkspaceContext';
 import ProtectedRoute from './components/ProtectedRoute';
 import AppLayout from './layouts/AppLayout';
 import LoginPage from './pages/LoginPage';
@@ -11,33 +12,35 @@ import AdminRoute from './components/AdminRoute';
 function App() {
   return (
     <AuthProvider>
-      <BrowserRouter>
-        <Routes>
-          <Route path="/login" element={<LoginPage />} />
+      <WorkspaceProvider>
+        <BrowserRouter>
+          <Routes>
+            <Route path="/login" element={<LoginPage />} />
 
-          <Route
-            element={
-              <ProtectedRoute>
-                <AppLayout />
-              </ProtectedRoute>
-            }
-          >
-            <Route path="/graph" element={<GraphPage />} />
-            <Route path="/file/:id" element={<FilePage />} />
             <Route
-              path="/admin/users"
               element={
-                <AdminRoute>
-                  <AdminPage />
-                </AdminRoute>
+                <ProtectedRoute>
+                  <AppLayout />
+                </ProtectedRoute>
               }
-            />
-            <Route path="/" element={<Navigate to="/graph" replace />} />
-          </Route>
+            >
+              <Route path="/graph" element={<GraphPage />} />
+              <Route path="/file/:id" element={<FilePage />} />
+              <Route
+                path="/admin/users"
+                element={
+                  <AdminRoute>
+                    <AdminPage />
+                  </AdminRoute>
+                }
+              />
+              <Route path="/" element={<Navigate to="/graph" replace />} />
+            </Route>
 
-          <Route path="*" element={<Navigate to="/graph" replace />} />
-        </Routes>
-      </BrowserRouter>
+            <Route path="*" element={<Navigate to="/graph" replace />} />
+          </Routes>
+        </BrowserRouter>
+      </WorkspaceProvider>
     </AuthProvider>
   );
 }

@@ -3,8 +3,11 @@
  * The service-account credentials live only server-side (api/files.js, api/file.js).
  */
 
-export async function fetchAllDocuments() {
-  const res = await fetch('/api/files');
+export async function fetchAllDocuments(folderId) {
+  const url = folderId
+    ? `/api/files?folderId=${encodeURIComponent(folderId)}`
+    : '/api/files';
+  const res = await fetch(url);
   if (!res.ok) throw new Error(`Failed to list documents (${res.status})`);
   return res.json();
 }
