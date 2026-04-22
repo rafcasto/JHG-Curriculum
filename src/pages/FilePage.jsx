@@ -270,6 +270,24 @@ export default function FilePage() {
         {readOnly && (
           <span className="readonly-badge">Read-only</span>
         )}
+        {canEdit && (
+          <div className="file-export-actions">
+            <button
+              className="export-btn"
+              onClick={() => window.print()}
+              title="Print document"
+            >
+              ⎙ Print
+            </button>
+            <button
+              className="export-btn"
+              onClick={() => window.print()}
+              title="Download as PDF via print dialog"
+            >
+              ↓ PDF
+            </button>
+          </div>
+        )}
         <button
           className={`graph-toggle-btn${showGraph ? ' active' : ''}`}
           onClick={handleToggleGraph}
