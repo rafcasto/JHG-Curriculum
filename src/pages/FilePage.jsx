@@ -7,8 +7,8 @@ import { fetchDocument, saveDocument, deleteDocument } from '../hooks/useDocumen
 import RichTextEditor from '../components/RichTextEditor';
 import GraphView, { DEFAULT_SETTINGS } from '../components/GraphView';
 import TableOfContents from '../components/TableOfContents';
-import WarmupQuestion from '../components/WarmupQuestion';
-import FeedbackForm from '../components/FeedbackForm';
+import PreSurveyModal from '../components/PreSurveyModal';
+import PostSurveyModal from '../components/PostSurveyModal';
 import './FilePage.css';
 
 /** Convert heading text to a URL-safe id for anchor links. */
@@ -51,7 +51,7 @@ export default function FilePage() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { user, role } = useAuth();
-  const { refreshDocuments } = useOutletContext() ?? {};
+  const { refreshDocuments, onReviewSubmissionUpdated } = useOutletContext() ?? {};
 
   const [doc, setDoc] = useState(null);
   const [content, setContent] = useState('');
@@ -65,9 +65,18 @@ export default function FilePage() {
   const readOnly = doc?.readOnly ?? false;
   const canEdit = role === 'admin' || role === 'editor';
 
-  // Reviewer feedback state
+  // Reviewer submission state
   const [submission, setSubmission] = useState(null);
   const [submissionChecked, setSubmissionChecked] = useState(false);
+
+  // Reviewer modal state
+  const [showPreSurveyModal, setShowPreSurveyModal] = useState(false);
+  const [showPostSurveyModal, setShowPostSurveyModal] = useState(false);
+
+  // Reviewer timer state
+  const [reviewStartTime, setReviewStartTime] = useState(null);
+  const [elapsedSeconds, setElapsedSeconds] = useState(0);
+  const [frozenDuration, setFrozenDuration] = useState(null);
 
   // Scroll container ref for the TOC intersection observer
   const scrollRef = useRef(null);
@@ -177,6 +186,46 @@ export default function FilePage() {
     return () => window.removeEventListener('keydown', onKeyDown);
   }, [mode, handleSave]);
 
+  // Reviewer: count up elapsed seconds while actively reviewing
+  useEffect(() => {
+    if (!reviewStartTime || submission?.status !== 'draft') return;
+    const interval = setInterval(() => {
+      setElapsedSeconds(Math.floor((Date.now() - reviewStartTime) / 1000));
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [reviewStartTime, submission?.status]);
+
+  // Reviewer helpers
+  function formatTime(s) {
+    const m = Math.floor(s / 60).toString().padStart(2, '0');
+    const sec = (s % 60).toString().padStart(2, '0');
+    return `${m}:${sec}`;
+  }
+
+  function handlePreSurveySubmitted(newSub) {
+    setSubmission(newSub);
+    setReviewStartTime(Date.now());
+    setElapsedSeconds(0);
+    setShowPreSurveyModal(false);
+    onReviewSubmissionUpdated?.(id, newSub);
+  }
+
+  function handleStopReview() {
+    setFrozenDuration(elapsedSeconds);
+    setShowPostSurveyModal(true);
+  }
+
+  function handlePostSurveySubmitted(updatedSub) {
+    setSubmission(updatedSub);
+    setShowPostSurveyModal(false);
+    onReviewSubmissionUpdated?.(id, updatedSub);
+  }
+
+  // Derived reviewer flags (computed after all hooks)
+  const isUnreviewed   = role === 'reviewer' && submissionChecked && !submission;
+  const isReviewing    = role === 'reviewer' && submission?.status === 'draft';
+  const isReviewComplete = role === 'reviewer' && submission?.status === 'complete';
+
   if (loading) {
     return (
       <div className="file-loading">
@@ -198,13 +247,25 @@ export default function FilePage() {
 
   return (
     <div className="file-page">
-      {/* Warm-up question — reviewer only, shown until submission is complete */}
-      {role === 'reviewer' && submissionChecked && submission?.status !== 'complete' && (
-        <WarmupQuestion
+      {/* Pre-survey modal — reviewer only, gate before reading */}
+      {showPreSurveyModal && (
+        <PreSurveyModal
+          documentId={id}
+          user={user}
+          submission={null}
+          onSubmitted={handlePreSurveySubmitted}
+        />
+      )}
+
+      {/* Post-survey modal — reviewer only, shown when Stop is clicked */}
+      {showPostSurveyModal && (
+        <PostSurveyModal
           documentId={id}
           user={user}
           submission={submission}
-          onSubmitted={setSubmission}
+          reviewDuration={frozenDuration ?? elapsedSeconds}
+          onSubmitted={handlePostSurveySubmitted}
+          onClose={() => setShowPostSurveyModal(false)}
         />
       )}
 
@@ -288,13 +349,34 @@ export default function FilePage() {
             </button>
           </div>
         )}
-        <button
-          className={`graph-toggle-btn${showGraph ? ' active' : ''}`}
-          onClick={handleToggleGraph}
-          title="Toggle local graph"
-        >
-          ⬡ Graph
-        </button>
+
+        {/* Reviewer: timer + stop while actively reviewing */}
+        {isReviewing && (
+          <div className="reviewer-controls">
+            <span className="reviewer-timer" title="Time spent reviewing">
+              {formatTime(elapsedSeconds)}
+            </span>
+            <button className="reviewer-stop-btn" onClick={handleStopReview}>
+              ■ Stop
+            </button>
+          </div>
+        )}
+
+        {/* Reviewer: badge when review is complete */}
+        {isReviewComplete && (
+          <span className="reviewer-done-badge">&#10003; Reviewed</span>
+        )}
+
+        {/* Graph toggle — hidden during active reviewer sessions */}
+        {!isReviewing && !isReviewComplete && (
+          <button
+            className={`graph-toggle-btn${showGraph ? ' active' : ''}`}
+            onClick={handleToggleGraph}
+            title="Toggle local graph"
+          >
+            ⬡ Graph
+          </button>
+        )}
       </div>
 
       {/* Local graph panel */}
@@ -329,44 +411,48 @@ export default function FilePage() {
 
       {/* Content area */}
       <div className="file-body">
-        {mode === 'preview' ? (
-          <>
-            <div className="file-content-scroll" ref={scrollRef}>
-              <div className="markdown-body">
-                <ReactMarkdown
-                  remarkPlugins={[remarkGfm]}
-                  components={headingComponents}
-                >
-                  {content}
-                </ReactMarkdown>
+        <div className={`file-content-wrapper${isUnreviewed ? ' file-content--blurred' : ''}`}>
+          {mode === 'preview' ? (
+            <>
+              <div className="file-content-scroll" ref={scrollRef}>
+                <div className="markdown-body">
+                  <ReactMarkdown
+                    remarkPlugins={[remarkGfm]}
+                    components={headingComponents}
+                  >
+                    {content}
+                  </ReactMarkdown>
+                </div>
               </div>
-            </div>
-            <TableOfContents content={content} scrollRef={scrollRef} />
-          </>
-        ) : (
-          <RichTextEditor
-            key={id}
-            initialContent={splitFrontmatter(content).body}
-            onChange={(newBody) => {
-              setContent((prev) => {
-                const { frontmatter } = splitFrontmatter(prev);
-                return frontmatter ? frontmatter + '\n' + newBody : newBody;
-              });
-              setDirty(true);
-            }}
-          />
-        )}
-      </div>
+              {!isUnreviewed && <TableOfContents content={content} scrollRef={scrollRef} />}
+            </>
+          ) : (
+            <RichTextEditor
+              key={id}
+              initialContent={splitFrontmatter(content).body}
+              onChange={(newBody) => {
+                setContent((prev) => {
+                  const { frontmatter } = splitFrontmatter(prev);
+                  return frontmatter ? frontmatter + '\n' + newBody : newBody;
+                });
+                setDirty(true);
+              }}
+            />
+          )}
 
-      {/* Post-reading feedback form — reviewer only, shown after warm-up */}
-      {role === 'reviewer' && submission?.status === 'draft' && (
-        <FeedbackForm
-          documentId={id}
-          user={user}
-          submission={submission}
-          onSubmitted={setSubmission}
-        />
-      )}
+          {/* Blur overlay with "Start Review" CTA — shown to reviewers before they begin */}
+          {isUnreviewed && (
+            <div className="file-start-overlay">
+              <button
+                className="file-start-btn"
+                onClick={() => setShowPreSurveyModal(true)}
+              >
+                Start Review
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
     </div>
   );
 }

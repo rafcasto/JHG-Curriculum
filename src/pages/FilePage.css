@@ -648,3 +648,105 @@
     page-break-inside: avoid;
   }
 }
+
+/* ── Reviewer: content wrapper + blur ────────────────────────────────────── */
+.file-content-wrapper {
+  flex: 1;
+  display: flex;
+  flex-direction: row;
+  overflow: hidden;
+  min-height: 0;
+  position: relative;
+}
+
+.file-content--blurred .file-content-scroll,
+.file-content--blurred .toc-panel {
+  filter: blur(6px);
+  pointer-events: none;
+  user-select: none;
+}
+
+/* ── Reviewer: start overlay ─────────────────────────────────────────────── */
+.file-start-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
+}
+
+.file-start-btn {
+  background: #e6edf3;
+  border: none;
+  border-radius: 8px;
+  color: #0d1117;
+  cursor: pointer;
+  font-size: 0.9375rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  padding: 0.75rem 2rem;
+  transition: background 0.15s, transform 0.1s;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+}
+
+.file-start-btn:hover {
+  background: #fff;
+  transform: translateY(-1px);
+}
+
+.file-start-btn:active {
+  transform: none;
+}
+
+/* ── Reviewer: topbar timer + controls ───────────────────────────────────── */
+.reviewer-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  flex-shrink: 0;
+}
+
+.reviewer-timer {
+  font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', ui-monospace, monospace;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #e6edf3;
+  letter-spacing: 0.05em;
+  background: #21262d;
+  border: 1px solid #30363d;
+  border-radius: 6px;
+  padding: 0.3rem 0.625rem;
+  min-width: 60px;
+  text-align: center;
+}
+
+.reviewer-stop-btn {
+  background: none;
+  border: 1px solid rgba(248, 81, 73, 0.35);
+  border-radius: 6px;
+  color: #f85149;
+  cursor: pointer;
+  font-size: 0.8rem;
+  font-weight: 600;
+  padding: 0.3rem 0.875rem;
+  transition: background 0.15s, border-color 0.15s;
+  line-height: 1.4;
+}
+
+.reviewer-stop-btn:hover {
+  background: rgba(248, 81, 73, 0.1);
+  border-color: #f85149;
+}
+
+/* ── Reviewer: done badge ─────────────────────────────────────────────────── */
+.reviewer-done-badge {
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 0.25rem 0.625rem;
+  border-radius: 10px;
+  background: rgba(63, 185, 80, 0.1);
+  border: 1px solid rgba(63, 185, 80, 0.3);
+  color: #3fb950;
+  flex-shrink: 0;
+}

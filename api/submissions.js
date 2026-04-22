@@ -231,7 +231,7 @@ export default async function handler(req, res) {
     const { id: submissionId } = req.query;
     if (!submissionId) return res.status(400).json({ error: 'Missing ?id parameter' });
 
-    const { responses } = req.body ?? {};
+    const { responses, reviewDuration } = req.body ?? {};
     if (!responses || typeof responses !== 'object') {
       return res.status(400).json({ error: 'responses object is required' });
     }
@@ -293,7 +293,7 @@ export default async function handler(req, res) {
       // Update submission and scores/documentId atomically
       await db.runTransaction(async (tx) => {
         // Update submission to complete
-        tx.update(submissionRef, {
+        const submissionUpdate = {
           status: 'complete',
           responses: normalisedResponses,
           scores: questionScores,
@@ -303,7 +303,11 @@ export default async function handler(req, res) {
           questionsSnapshot,
           submittedAt: FieldValue.serverTimestamp(),
           formVersion: now,
-        });
+        };
+        if (typeof reviewDuration === 'number' && reviewDuration >= 0) {
+          submissionUpdate.reviewDuration = Math.round(reviewDuration);
+        }
+        tx.update(submissionRef, submissionUpdate);
 
         // Update aggregate scores document
         const scoresRef = db.collection('scores').doc(submission.documentId);

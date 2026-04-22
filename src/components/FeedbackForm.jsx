@@ -160,12 +160,13 @@ function ThankYouCard({ submission }) {
 
 /**
  * Props:
- *   documentId   — Drive file ID
- *   user         — Firebase Auth user object
- *   submission   — existing submission object (must be status 'draft')
- *   onSubmitted  — called with updated submission on successful submit
+ *   documentId     — Drive file ID
+ *   user           — Firebase Auth user object
+ *   submission     — existing submission object (must be status 'draft')
+ *   reviewDuration — elapsed review time in seconds (optional)
+ *   onSubmitted    — called with updated submission on successful submit
  */
-export default function FeedbackForm({ documentId, user, submission, onSubmitted }) {
+export default function FeedbackForm({ documentId, user, submission, reviewDuration, onSubmitted }) {
   const [questions, setQuestions] = useState([]);
   const [responses, setResponses] = useState({});
   const [loading, setLoading] = useState(true);
@@ -227,7 +228,10 @@ export default function FeedbackForm({ documentId, user, submission, onSubmitted
       const res = await fetch(`/api/submissions?id=${encodeURIComponent(submission.id ?? `${user.uid}_${documentId}`)}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ responses }),
+        body: JSON.stringify({
+          responses,
+          ...(typeof reviewDuration === 'number' ? { reviewDuration } : {}),
+        }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? 'Submission failed');

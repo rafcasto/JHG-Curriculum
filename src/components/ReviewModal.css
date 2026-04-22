@@ -1,0 +1,66 @@
+/* Shared modal base styles for reviewer pre/post survey modals */
+
+/* ── Backdrop ────────────────────────────────────────────────────────────── */
+.rmodal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(1, 4, 9, 0.82);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 1.5rem;
+}
+
+/* ── Card ────────────────────────────────────────────────────────────────── */
+.rmodal-card {
+  position: relative;
+  background: #161b22;
+  border: 1px solid #30363d;
+  border-radius: 14px;
+  width: 100%;
+  max-width: 520px;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.04),
+    0 24px 64px rgba(0, 0, 0, 0.6);
+  animation: rmodal-in 0.2s ease;
+}
+
+.rmodal-card--large {
+  max-width: 680px;
+}
+
+@keyframes rmodal-in {
+  from { opacity: 0; transform: translateY(12px) scale(0.98); }
+  to   { opacity: 1; transform: translateY(0)   scale(1); }
+}
+
+/* ── Close button ────────────────────────────────────────────────────────── */
+.rmodal-close {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  background: none;
+  border: none;
+  color: #484f58;
+  font-size: 1rem;
+  cursor: pointer;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  transition: background 0.15s, color 0.15s;
+  z-index: 10;
+  line-height: 1;
+}
+
+.rmodal-close:hover {
+  background: #21262d;
+  color: #e6edf3;
+}
