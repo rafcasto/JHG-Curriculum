@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback } from 'react';
 import GraphView, { DEFAULT_SETTINGS } from '../components/GraphView';
 import GraphSettings from '../components/GraphSettings';
 import TableView from '../components/TableView';
+import { useWorkspace } from '../contexts/WorkspaceContext';
 import './GraphPage.css';
 
 const MODULE_COLORS = {
@@ -17,6 +18,7 @@ const MODULE_COLORS = {
 };
 
 export default function GraphPage() {
+  const { currentWorkspace } = useWorkspace();
   const [graphData, setGraphData] = useState(null);
   const [loading, setLoading]     = useState(true);
   const [error, setError]         = useState(null);
@@ -25,12 +27,19 @@ export default function GraphPage() {
   const [view, setView]           = useState('graph'); // 'graph' | 'table'
 
   useEffect(() => {
-    fetch('/api/graph')
+    setLoading(true);
+    setError(null);
+    setGraphData(null);
+    const folderId = currentWorkspace?.driveFolderId;
+    const url = folderId
+      ? `/api/graph?folderId=${encodeURIComponent(folderId)}`
+      : '/api/graph';
+    fetch(url)
       .then((r) => { if (!r.ok) throw new Error(`Graph load failed (${r.status})`); return r.json(); })
       .then(setGraphData)
       .catch((e) => setError(e.message))
       .finally(() => setLoading(false));
-  }, []);
+  }, [currentWorkspace]);
 
   const handleSettingsChange = useCallback((patch) => {
     setSettings((prev) => ({ ...prev, ...patch }));

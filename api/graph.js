@@ -20,9 +20,8 @@ const driveAuth = new google.auth.JWT({
 });
 const drive = google.drive({ version: 'v3', auth: driveAuth });
 
-// ── In-process cache ─────────────────────────────────────────────────────────
-let cache = null;
-let cacheTime = 0;
+// ── In-process cache — keyed per folderId ──────────────────────────────────
+const cacheMap = new Map(); // folderId → { graph, time }
 const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
@@ -173,8 +172,7 @@ async function downloadText(fileId, mimeType) {
 }
 
 // ── Build graph data ──────────────────────────────────────────────────────────
-async function buildGraph() {
-  const folderId = process.env.GOOGLE_DRIVE_FOLDER_ID;
+async function buildGraph(folderId) {
   const files = await walkDrive(folderId);
 
   // Download all content in parallel (batched to avoid rate limits)
@@ -279,17 +277,27 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
+  // Accept workspace-scoped folderId; validate format
+  const queryFolder = req.query?.folderId;
+  if (queryFolder !== undefined && !/^[a-zA-Z0-9_-]{10,}$/.test(queryFolder)) {
+    return res.status(400).json({ error: 'Invalid folderId' });
+  }
+  const folderId = queryFolder || process.env.GOOGLE_DRIVE_FOLDER_ID;
+  if (!folderId) {
+    return res.status(500).json({ error: 'GOOGLE_DRIVE_FOLDER_ID not configured' });
+  }
+
   const now = Date.now();
-  if (cache && now - cacheTime < CACHE_TTL) {
+  const cached = cacheMap.get(folderId);
+  if (cached && now - cached.time < CACHE_TTL) {
     res.setHeader('Cache-Control', 's-maxage=300, stale-while-revalidate=60');
     res.setHeader('X-Cache', 'HIT');
-    return res.json(cache);
+    return res.json(cached.graph);
   }
 
   try {
-    const graph = await buildGraph();
-    cache = graph;
-    cacheTime = now;
+    const graph = await buildGraph(folderId);
+    cacheMap.set(folderId, { graph, time: now });
     res.setHeader('Cache-Control', 's-maxage=300, stale-while-revalidate=60');
     res.setHeader('X-Cache', 'MISS');
     return res.json(graph);
