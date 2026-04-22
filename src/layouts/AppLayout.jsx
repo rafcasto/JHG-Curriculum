@@ -115,7 +115,7 @@ export default function AppLayout() {
           <Sidebar documents={documents} loading={loading} onRefresh={refreshDocuments} />
         )}
         <main className="app-main">
-          <Outlet context={{ refreshDocuments, onReviewSubmissionUpdated }} />
+          <Outlet context={{ refreshDocuments, onReviewSubmissionUpdated, reviewDocs, reviewLoading }} />
         </main>
       </div>
     </div>

@@ -191,11 +191,58 @@
   min-height: 0;
 }
 
+/* Flex wrapper that holds the scroll area + TOC panel side by side.
+   position: relative is required for the review overlay to position correctly. */
+.file-content-wrapper {
+  flex: 1;
+  display: flex;
+  flex-direction: row;
+  overflow: hidden;
+  min-height: 0;
+  position: relative;
+}
+
+/* Blurred state while reviewer hasn't started yet */
+.file-content--blurred .file-content-scroll {
+  filter: blur(5px);
+  pointer-events: none;
+  user-select: none;
+}
+
 /* Scrollable zone that wraps the markdown content */
 .file-content-scroll {
   flex: 1;
   overflow-y: auto;
   min-width: 0;
+}
+
+/* ── Reviewer start-review overlay ───────────────────────────────────────── */
+.file-start-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
+  background: rgba(13, 17, 23, 0.45);
+}
+
+.file-start-btn {
+  background: #238636;
+  color: #fff;
+  border: 1px solid rgba(240, 246, 252, 0.1);
+  border-radius: 8px;
+  padding: 0.75rem 2.25rem;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s, transform 0.1s;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+}
+
+.file-start-btn:hover {
+  background: #2ea043;
+  transform: translateY(-1px);
 }
 
 /* ── Loading / Error ──────────────────────────────────────────────────────── */

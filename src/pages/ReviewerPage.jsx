@@ -1,36 +1,21 @@
-import { useEffect, useState, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { useWorkspace } from '../contexts/WorkspaceContext';
-import { fetchAllDocuments } from '../hooks/useDocuments';
+import { useMemo } from 'react';
+import { useNavigate, useOutletContext } from 'react-router-dom';
 import './ReviewerPage.css';
 
 function getFolder(doc) {
-  if (!doc.path) return '(uncategorized)';
-  const first = doc.path.split('/')[0].trim();
+  const path = doc.drivePath ?? '';
+  if (!path) return '(uncategorized)';
+  const first = path.split('/')[0].trim();
   return first || '(uncategorized)';
 }
 
 export default function ReviewerPage() {
-  const { currentWorkspace } = useWorkspace();
+  const { reviewDocs = [], reviewLoading = false } = useOutletContext() ?? {};
   const navigate = useNavigate();
-
-  const [docs, setDocs] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-
-  useEffect(() => {
-    setLoading(true);
-    setError(null);
-    setDocs([]);
-    fetchAllDocuments(currentWorkspace?.driveFolderId)
-      .then(setDocs)
-      .catch((e) => setError(e.message))
-      .finally(() => setLoading(false));
-  }, [currentWorkspace]);
 
   const grouped = useMemo(() => {
     const map = {};
-    docs.forEach((doc) => {
+    reviewDocs.forEach((doc) => {
       const folder = getFolder(doc);
       if (!map[folder]) map[folder] = [];
       map[folder].push(doc);
@@ -42,11 +27,11 @@ export default function ReviewerPage() {
     });
     return sorted.map((folder) => ({
       folder,
-      files: map[folder].sort((a, b) => a.title.localeCompare(b.title)),
+      files: map[folder].sort((a, b) => (a.title ?? '').localeCompare(b.title ?? '')),
     }));
-  }, [docs]);
+  }, [reviewDocs]);
 
-  if (loading) {
+  if (reviewLoading) {
     return (
       <div className="rv-loading">
         <div className="rv-spinner" />
@@ -55,28 +40,31 @@ export default function ReviewerPage() {
     );
   }
 
-  if (error) {
+  if (grouped.length === 0) {
     return (
-      <div className="rv-error">
-        <p>Failed to load documents: {error}</p>
+      <div className="rv-welcome">
+        <div className="rv-welcome-inner">
+          <p className="rv-welcome-icon" aria-hidden="true">&#128196;</p>
+          <h1 className="rv-welcome-heading">No documents assigned yet.</h1>
+          <p className="rv-welcome-text">
+            Check back later or contact your workspace administrator.
+          </p>
+        </div>
       </div>
     );
   }
 
   return (
     <div className="rv-toc-page">
-      {currentWorkspace && (
-        <p className="rv-toc-workspace">{currentWorkspace.name}</p>
-      )}
       {grouped.map(({ folder, files }) => (
         <section key={folder} className="rv-toc-section">
-          <h1 className="rv-toc-folder">{folder}</h1>
+          <h2 className="rv-toc-folder">{folder}</h2>
           <ul className="rv-toc-files">
             {files.map((doc) => (
               <li key={doc.id}>
                 <button
                   className="rv-toc-file-link"
-                  onClick={() => navigate(`/file/${doc.id}`)}
+                  onClick={() => navigate(`/file/${doc.driveFileId}`)}
                 >
                   {doc.title}
                 </button>
