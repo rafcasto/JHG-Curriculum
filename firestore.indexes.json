@@ -9,6 +9,14 @@
       ]
     },
     {
+      "collectionGroup": "workspaces",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "userIds", "arrayConfig": "CONTAINS" },
+        { "fieldPath": "name", "order": "ASCENDING" }
+      ]
+    },
+    {
       "collectionGroup": "questions",
       "queryScope": "COLLECTION",
       "fields": [

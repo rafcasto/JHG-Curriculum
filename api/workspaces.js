@@ -83,10 +83,12 @@ export default async function handler(req, res) {
     try {
       const col = db.collection('workspaces');
       const snap = isAdmin
-        ? await col.orderBy('name').get()
-        : await col.where('userIds', 'array-contains', claims.uid).orderBy('name').get();
+        ? await col.get()
+        : await col.where('userIds', 'array-contains', claims.uid).get();
 
-      const workspaces = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+      const workspaces = snap.docs
+        .map((d) => ({ id: d.id, ...d.data() }))
+        .sort((a, b) => (a.name ?? '').localeCompare(b.name ?? ''));
       return res.json(workspaces);
     } catch (e) {
       console.error('[api/workspaces GET]', e.message);
