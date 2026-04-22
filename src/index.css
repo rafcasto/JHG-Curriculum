@@ -17,10 +17,18 @@ body {
   color: #e6edf3;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
 }
 
 button {
   font-family: inherit;
+}
+
+input, textarea, select {
+  font-family: inherit;
+  -webkit-appearance: none;
+  appearance: none;
 }
 
 * {

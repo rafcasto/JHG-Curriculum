@@ -1,6 +1,7 @@
 /* ── Login Page ──────────────────────────────────────────────────────────── */
 .login-container {
   min-height: 100vh;
+  min-height: 100dvh;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -71,12 +72,17 @@
 }
 
 .field input {
+.field input {
   background: #0d1117;
   border: 1px solid #30363d;
   border-radius: 6px;
   color: #e6edf3;
   padding: 0.625rem 0.875rem;
-  font-size: 0.9375rem;
+  font-size: 1rem;
+  width: 100%;
+  box-sizing: border-box;
+  -webkit-appearance: none;
+  appearance: none;
   transition: border-color 0.15s;
   outline: none;
 }

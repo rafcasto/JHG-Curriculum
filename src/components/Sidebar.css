@@ -43,6 +43,8 @@
   outline: none;
   width: 100%;
   box-sizing: border-box;
+  -webkit-appearance: none;
+  appearance: none;
 }
 
 .sidebar-search:focus {
@@ -317,6 +319,8 @@
   font-size: 0.875rem;
   padding: 0.45rem 0.75rem;
   outline: none;
+  -webkit-appearance: none;
+  appearance: none;
   transition: border-color 0.15s;
   width: 100%;
   box-sizing: border-box;
