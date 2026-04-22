@@ -1,6 +1,7 @@
 import { useMemo, useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import { useWorkspace } from '../contexts/WorkspaceContext';
 import { createDocument, renameDocument } from '../hooks/useDocuments';
 import './Sidebar.css';
 
@@ -73,15 +74,25 @@ export default function Sidebar({ documents, loading = false, onRefresh }) {
   const [renameError, setRenameError] = useState(null); // { id, message }
 
   const canEdit = role === 'admin' || role === 'editor';
+  const { currentWorkspace } = useWorkspace();
+  const workspaceFolderId = currentWorkspace?.driveFolderId ?? null;
 
-  // Pre-load folders so per-folder "+" can match module keys immediately
+  /** Build the /api/folders URL, optionally scoped to the current workspace root. */
+  function foldersUrl() {
+    return workspaceFolderId
+      ? `/api/folders?folderId=${encodeURIComponent(workspaceFolderId)}`
+      : '/api/folders';
+  }
+
+  // Pre-load folders whenever the workspace changes
   useEffect(() => {
     if (!canEdit) return;
-    fetch('/api/folders')
+    fetch(foldersUrl())
       .then((r) => r.json())
       .then(setFolders)
       .catch(() => {});
-  }, [canEdit]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [canEdit, workspaceFolderId]);
 
   function openModalForFolder(moduleKey) {
     const matched = folders.find(
@@ -93,7 +104,7 @@ export default function Sidebar({ documents, loading = false, onRefresh }) {
     setModalCategories([]);
     setModalError(null);
     setFoldersLoading(true);
-    fetch('/api/folders')
+    fetch(foldersUrl())
       .then((r) => r.json())
       .then((fols) => {
         setModalFolders(fols);

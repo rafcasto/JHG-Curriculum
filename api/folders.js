@@ -35,7 +35,13 @@ export default async function handler(req, res) {
     }
   }
 
-  const folderId = process.env.GOOGLE_DRIVE_FOLDER_ID;
+  // Optional ?folderId= overrides the env root (workspace-scoped listing)
+  const queryFolder = req.query?.folderId;
+  if (queryFolder !== undefined && !/^[a-zA-Z0-9_-]{10,}$/.test(queryFolder)) {
+    return res.status(400).json({ error: 'Invalid folderId' });
+  }
+
+  const folderId = queryFolder || process.env.GOOGLE_DRIVE_FOLDER_ID;
   if (!folderId) {
     return res.status(500).json({ error: 'GOOGLE_DRIVE_FOLDER_ID not configured' });
   }
