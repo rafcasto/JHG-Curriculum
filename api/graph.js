@@ -26,17 +26,8 @@ const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
-const MODULE_ORDER = [
-  '0. preparation', '1. focus', '2. value', '3. profile',
-  '4. applications', '5. network', '6. interviews', '7. deal',
-];
-
 function inferModule(path) {
-  const p = (path ?? '').toLowerCase();
-  for (const m of MODULE_ORDER) {
-    if (p.startsWith(m)) return m;
-  }
-  return 'other';
+  return path ? (path.split('/')[0] || 'other') : 'other';
 }
 
 function inferType(title, path) {
@@ -48,9 +39,7 @@ function inferType(title, path) {
   return 'lesson';
 }
 
-function inferModuleFromTag(tagStr) {
-  const m = tagStr.match(/Module\/(\d)/);
-  if (m) return MODULE_ORDER[parseInt(m[1])] ?? 'other';
+function inferModuleFromTag() {
   return 'other';
 }
 

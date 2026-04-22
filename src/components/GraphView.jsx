@@ -10,22 +10,25 @@ const TYPE_COLORS = {
   default:  '#8b949e',
 };
 
-const MODULE_COLORS = {
-  '0. preparation':  '#f0883e',
-  '1. focus':        '#58a6ff',
-  '2. value':        '#3fb950',
-  '3. profile':      '#bc8cff',
-  '4. applications': '#e3b341',
-  '5. network':      '#f78166',
-  '6. interviews':   '#56d364',
-  '7. deal':         '#79c0ff',
-  'other':           '#8b949e',
-};
+const MODULE_PALETTE = [
+  '#f0883e', '#58a6ff', '#3fb950', '#bc8cff',
+  '#e3b341', '#f78166', '#56d364', '#79c0ff',
+  '#ff7b72', '#d2a8ff', '#7ee787', '#ffa657',
+];
 
-function getNodeColor(node, colorBy = 'module') {
+export function buildModuleColors(sortedNames) {
+  const colors = {};
+  sortedNames.filter((n) => n !== 'other').forEach((name, i) => {
+    colors[name] = MODULE_PALETTE[i % MODULE_PALETTE.length];
+  });
+  colors['other'] = '#8b949e';
+  return colors;
+}
+
+function getNodeColor(node, colorBy = 'module', moduleColors = {}) {
   if (node.isTagNode) return 'rgba(255,255,255,0.08)';
   if (colorBy === 'type') return TYPE_COLORS[node.type] ?? TYPE_COLORS.default;
-  return MODULE_COLORS[node.module] ?? TYPE_COLORS[node.type] ?? TYPE_COLORS.default;
+  return moduleColors[node.module] ?? TYPE_COLORS[node.type] ?? TYPE_COLORS.default;
 }
 
 // Default settings — keeps behaviour identical to previous version when no settings passed
@@ -78,6 +81,9 @@ export default function GraphView({ graphData, documents, settings: settingsProp
     const W = container.clientWidth  || 900;
     const H = container.clientHeight || 700;
 
+    const sortedModuleNames = [...new Set(rawData.nodes.filter((n) => !n.isTagNode).map((n) => n.module))]
+      .sort((a, b) => (a === 'other' ? 1 : b === 'other' ? -1 : a.localeCompare(b)));
+    const moduleColors = buildModuleColors(sortedModuleNames);
     // ── Local mode: BFS to collect visible node IDs ───────────────────────
     let visibleIds = null;
     if (localMode?.centerNodeId) {
@@ -314,7 +320,7 @@ export default function GraphView({ graphData, documents, settings: settingsProp
     nodeEl.append('circle')
       .attr('class', 'node-halo')
       .attr('r', (n) => nodeRadius(n.id) + 4)
-      .attr('fill', (n) => getNodeColor(n, settings.colorBy))
+      .attr('fill', (n) => getNodeColor(n, settings.colorBy, moduleColors))
       .attr('opacity', 0)
       .attr('filter', 'url(#node-glow)');
 
@@ -322,7 +328,7 @@ export default function GraphView({ graphData, documents, settings: settingsProp
     nodeEl.append('circle')
       .attr('class', 'node-circle')
       .attr('r', (n) => nodeRadius(n.id))
-      .attr('fill', (n) => n.isTagNode ? 'rgba(255,255,255,0.08)' : getNodeColor(n, settings.colorBy))
+      .attr('fill', (n) => n.isTagNode ? 'rgba(255,255,255,0.08)' : getNodeColor(n, settings.colorBy, moduleColors))
       .attr('stroke', (n) => n.isTagNode ? '#e3b341' : (n.id === localMode?.centerNodeId ? '#ffffff' : '#0d1117'))
       .attr('stroke-width', (n) => n.isTagNode ? 1.5 : (n.id === localMode?.centerNodeId ? 2.5 : 1.5))
       .attr('stroke-dasharray', (n) => n.isTagNode ? '3 2' : null)
@@ -408,7 +414,7 @@ export default function GraphView({ graphData, documents, settings: settingsProp
           .attr('fill', (d) => d.id === n.id ? '#ffffff' : '#c9d1d9');
 
         linkEl
-          .attr('stroke', (l) => connLinks.has(l) ? getNodeColor(n, settings.colorBy) : '#30363d')
+          .attr('stroke', (l) => connLinks.has(l) ? getNodeColor(n, settings.colorBy, moduleColors) : '#30363d')
           .attr('stroke-opacity', (l) => connLinks.has(l) ? 0.85 : 0.05)
           .attr('stroke-width', (l) => connLinks.has(l) ? Math.max(settings.linkThickness, 2) : settings.linkThickness);
       })

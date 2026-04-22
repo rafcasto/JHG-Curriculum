@@ -1,21 +1,9 @@
 import { useEffect, useState, useCallback } from 'react';
-import GraphView, { DEFAULT_SETTINGS } from '../components/GraphView';
+import GraphView, { DEFAULT_SETTINGS, buildModuleColors } from '../components/GraphView';
 import GraphSettings from '../components/GraphSettings';
 import TableView from '../components/TableView';
 import { useWorkspace } from '../contexts/WorkspaceContext';
 import './GraphPage.css';
-
-const MODULE_COLORS = {
-  '0. preparation':  '#f0883e',
-  '1. focus':        '#58a6ff',
-  '2. value':        '#3fb950',
-  '3. profile':      '#bc8cff',
-  '4. applications': '#e3b341',
-  '5. network':      '#f78166',
-  '6. interviews':   '#56d364',
-  '7. deal':         '#79c0ff',
-  'other':           '#8b949e',
-};
 
 export default function GraphPage() {
   const { currentWorkspace } = useWorkspace();
@@ -62,7 +50,9 @@ export default function GraphPage() {
     );
   }
 
-  const modules = [...new Set(graphData.nodes.filter((n) => !n.isTagNode).map((n) => n.module))].sort();
+  const modules = [...new Set(graphData.nodes.filter((n) => !n.isTagNode).map((n) => n.module))]
+    .sort((a, b) => (a === 'other' ? 1 : b === 'other' ? -1 : a.localeCompare(b)));
+  const moduleColors = buildModuleColors(modules);
 
   return (
     <div className="graph-page">
@@ -126,7 +116,7 @@ export default function GraphPage() {
         <div className="graph-legend">
           {modules.map((m) => (
             <span key={m} className="legend-item">
-              <span className="legend-dot" style={{ background: MODULE_COLORS[m] ?? '#8b949e' }} />
+              <span className="legend-dot" style={{ background: moduleColors[m] ?? '#8b949e' }} />
               {m.replace(/^\d+\.\s+/, '')}
             </span>
           ))}

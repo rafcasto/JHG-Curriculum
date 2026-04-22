@@ -4,23 +4,8 @@ import { useAuth } from '../contexts/AuthContext';
 import { createDocument } from '../hooks/useDocuments';
 import './Sidebar.css';
 
-const MODULE_ORDER = [
-  '0. preparation',
-  '1. focus',
-  '2. value',
-  '3. profile',
-  '4. applications',
-  '5. network',
-  '6. interviews',
-  '7. deal',
-];
-
 function getModule(doc) {
-  const p = (doc.path ?? '').toLowerCase();
-  for (const m of MODULE_ORDER) {
-    if (p.startsWith(m)) return m;
-  }
-  return 'other';
+  return (doc.path ?? '').split('/')[0] || 'other';
 }
 
 /** Infer a document type from its title/path when frontMatter is unavailable */
@@ -114,14 +99,9 @@ export default function Sidebar({ documents, loading = false, onRefresh }) {
     return groups;
   }, [documents, search]);
 
-  const sortedModules = Object.keys(grouped).sort((a, b) => {
-    const ai = MODULE_ORDER.indexOf(a);
-    const bi = MODULE_ORDER.indexOf(b);
-    if (ai === -1 && bi === -1) return a.localeCompare(b);
-    if (ai === -1) return 1;
-    if (bi === -1) return -1;
-    return ai - bi;
-  });
+  const sortedModules = Object.keys(grouped).sort((a, b) =>
+    a === 'other' ? 1 : b === 'other' ? -1 : a.localeCompare(b)
+  );
 
   function toggle(key) {
     setCollapsed((prev) => ({ ...prev, [key]: !prev[key] }));
