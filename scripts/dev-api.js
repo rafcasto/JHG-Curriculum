@@ -18,6 +18,7 @@ import fileHandler from '../api/file.js';
 import graphHandler from '../api/graph.js';
 import usersHandler from '../api/users.js';
 import foldersHandler from '../api/folders.js';
+import workspacesHandler from '../api/workspaces.js';
 
 const PORT = 3000;
 
@@ -77,11 +78,12 @@ const server = createServer((req, res) => {
     return res.end();
   }
 
-  if (pathname === '/api/files')   return runHandler(filesHandler,   req, res);
-  if (pathname === '/api/file')    return runHandler(fileHandler,    req, res);
-  if (pathname === '/api/graph')   return runHandler(graphHandler,   req, res);
-  if (pathname === '/api/users')   return runHandler(usersHandler,   req, res);
-  if (pathname === '/api/folders') return runHandler(foldersHandler, req, res);
+  if (pathname === '/api/files')      return runHandler(filesHandler,      req, res);
+  if (pathname === '/api/file')       return runHandler(fileHandler,       req, res);
+  if (pathname === '/api/graph')      return runHandler(graphHandler,      req, res);
+  if (pathname === '/api/users')      return runHandler(usersHandler,      req, res);
+  if (pathname === '/api/folders')    return runHandler(foldersHandler,    req, res);
+  if (pathname === '/api/workspaces') return runHandler(workspacesHandler, req, res);
 
   res.writeHead(404, { 'Content-Type': 'application/json' });
   res.end(JSON.stringify({ error: 'Not found' }));
@@ -100,4 +102,8 @@ server.listen(PORT, () => {
   console.log('  POST        /api/users');
   console.log('  PATCH       /api/users?uid=<uid>');
   console.log('  DELETE      /api/users?uid=<uid>');
+  console.log('  GET         /api/workspaces');
+  console.log('  POST        /api/workspaces');
+  console.log('  PATCH       /api/workspaces?id=<id>');
+  console.log('  DELETE      /api/workspaces?id=<id>');
 });

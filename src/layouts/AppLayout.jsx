@@ -12,18 +12,13 @@ export default function AppLayout() {
   const [loading, setLoading] = useState(true);
 
   const refreshDocuments = useCallback(() => {
-    if (!currentWorkspace) return;
-    fetchAllDocuments(currentWorkspace.driveFolderId).then(setDocuments).catch(console.error);
+    fetchAllDocuments(currentWorkspace?.driveFolderId ?? null).then(setDocuments).catch(console.error);
   }, [currentWorkspace]);
 
   useEffect(() => {
-    if (!currentWorkspace) {
-      setDocuments([]);
-      setLoading(false);
-      return;
-    }
     setLoading(true);
-    fetchAllDocuments(currentWorkspace.driveFolderId)
+    // If no workspace is selected yet, fall back to the default Drive folder
+    fetchAllDocuments(currentWorkspace?.driveFolderId ?? null)
       .then(setDocuments)
       .catch(console.error)
       .finally(() => setLoading(false));

@@ -8,7 +8,7 @@ const ROLES = ['admin', 'editor', 'viewer'];
 
 // ── Workspace Management Section ────────────────────────────────────────────
 function WorkspacesSection({ users, getToken }) {
-  const { workspaces, refreshWorkspaces } = useWorkspace();
+  const { workspaces, loading: wsLoading, error: wsLoadError, refreshWorkspaces } = useWorkspace();
   const [wsForm, setWsForm] = useState({ name: '', driveFolderId: '' });
   const [wsFormError, setWsFormError] = useState(null);
   const [wsFormLoading, setWsFormLoading] = useState(false);
@@ -129,6 +129,28 @@ function WorkspacesSection({ users, getToken }) {
         {wsFormError && <p className="admin-form-error">{wsFormError}</p>}
       </form>
 
+      {wsLoadError && (
+        <div className="admin-error" style={{ marginTop: '0.75rem' }}>
+          <div>
+            <strong>Could not load workspaces:</strong> {wsLoadError}
+            {wsLoadError.includes('Firestore') && (
+              <p style={{ margin: '0.35rem 0 0', fontSize: '0.8125rem', color: '#c9d1d9' }}>
+                Go to the{' '}
+                <a
+                  href="https://console.firebase.google.com/project/jhg-academy/firestore"
+                  target="_blank"
+                  rel="noreferrer"
+                  style={{ color: '#58a6ff' }}
+                >
+                  Firebase Console → Firestore
+                </a>{' '}
+                and create a database (Native mode, any region).
+              </p>
+            )}
+          </div>
+          <button className="admin-retry-btn" onClick={refreshWorkspaces}>Retry</button>
+        </div>
+      )}
       {wsError && <p className="admin-form-error" style={{ marginTop: '0.75rem' }}>{wsError}</p>}
 
       {/* Workspace list */}

@@ -90,7 +90,10 @@ export default async function handler(req, res) {
       return res.json(workspaces);
     } catch (e) {
       console.error('[api/workspaces GET]', e.message);
-      return res.status(500).json({ error: e.message });
+      const msg = e.code === 5 || e.message?.includes('NOT_FOUND')
+        ? 'Firestore database not found. Please create a Firestore database in the Firebase Console for project jhg-academy.'
+        : e.message;
+      return res.status(500).json({ error: msg });
     }
   }
 
@@ -127,7 +130,10 @@ export default async function handler(req, res) {
       });
     } catch (e) {
       console.error('[api/workspaces POST]', e.message);
-      return res.status(500).json({ error: e.message });
+      const msg = e.code === 5 || e.message?.includes('NOT_FOUND')
+        ? 'Firestore database not found. Please create a Firestore database in the Firebase Console for project jhg-academy.'
+        : e.message;
+      return res.status(500).json({ error: msg });
     }
   }
 
