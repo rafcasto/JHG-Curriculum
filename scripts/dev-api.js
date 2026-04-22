@@ -97,6 +97,7 @@ server.listen(PORT, () => {
   console.log('  GET         /api/file?id=<id>');
   console.log('  POST        /api/file?folderId=<id>');
   console.log('  PUT         /api/file?id=<id>');
+  console.log('  PATCH       /api/file?id=<id>      (rename)');
   console.log('  DELETE      /api/file?id=<id>');
   console.log('  GET         /api/users');
   console.log('  POST        /api/users');

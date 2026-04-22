@@ -79,6 +79,89 @@ async function downloadContent(fileId, mimeType) {
 }
 
 export default async function handler(req, res) {
+  // ── POST: create new .md file (uses ?folderId, not ?id) ───────────────────
+  if (req.method === 'POST') {
+    try { await requireWriteAccess(req); } catch (e) { return res.status(e.status ?? 500).json({ error: e.message }); }
+    const { folderId } = req.query;
+    const { name, tag, categories } = req.body ?? {};
+    if (!folderId) return res.status(400).json({ error: 'Missing ?folderId parameter' });
+    if (!name || typeof name !== 'string' || !name.trim()) {
+      return res.status(400).json({ error: 'Request body must include { name: string }' });
+    }
+
+    const safeName = name.trim().replace(/[\/\\]/g, '').replace(/\.md$/i, '') + '.md';
+    const fileTitle = safeName.replace(/\.md$/i, '');
+
+    // Build YAML frontmatter if tag or categories are provided
+    let frontmatterBlock = '';
+    if (tag || (Array.isArray(categories) && categories.length > 0)) {
+      const lines = ['---'];
+      if (tag) {
+        lines.push('tags:');
+        lines.push(`  - ${tag}`);
+      }
+      if (Array.isArray(categories) && categories.length > 0) {
+        lines.push('category:');
+        categories.forEach((c) => lines.push(`  - ${c}`));
+      }
+      lines.push('---');
+      frontmatterBlock = lines.join('\n') + '\n';
+    }
+
+    try {
+      const rootFolderId = process.env.GOOGLE_DRIVE_FOLDER_ID;
+      if (folderId !== rootFolderId) {
+        const folderMeta = await drive.files.get({
+          fileId: folderId,
+          fields: 'parents',
+          supportsAllDrives: true,
+        });
+        const parents = folderMeta.data.parents ?? [];
+        if (!parents.includes(rootFolderId)) {
+          return res.status(403).json({ error: 'Target folder is outside the allowed Drive tree' });
+        }
+      }
+
+      const created = await drive.files.create({
+        supportsAllDrives: true,
+        requestBody: { name: safeName, mimeType: 'text/plain', parents: [folderId] },
+        media: { mimeType: 'text/plain', body: `${frontmatterBlock}# ${fileTitle}\n` },
+        fields: 'id, name',
+      });
+
+      return res.status(201).json({ id: created.data.id, name: created.data.name });
+    } catch (err) {
+      console.error('[api/file POST]', err.message);
+      return res.status(500).json({ error: err.message });
+    }
+  }
+
+  // ── PATCH: rename file ─────────────────────────────────────────────────────
+  if (req.method === 'PATCH') {
+    try { await requireWriteAccess(req); } catch (e) { return res.status(e.status ?? 500).json({ error: e.message }); }
+    const { id: patchId } = req.query;
+    if (!patchId) return res.status(400).json({ error: 'Missing ?id parameter' });
+    const { name } = req.body ?? {};
+    if (!name || typeof name !== 'string' || !name.trim()) {
+      return res.status(400).json({ error: 'Request body must include { name: string }' });
+    }
+    const safeName = name.trim().replace(/[\/\\]/g, '').replace(/\.md$/i, '') + '.md';
+    try {
+      const meta = await drive.files.get({ fileId: patchId, fields: 'mimeType', supportsAllDrives: true });
+      if (meta.data.mimeType === 'application/vnd.google-apps.document') {
+        return res.status(400).json({ error: 'Google Docs cannot be renamed from this app' });
+      }
+      const updated = await drive.files.update(
+        { fileId: patchId, supportsAllDrives: true, fields: 'id, name' },
+        { requestBody: { name: safeName } }
+      );
+      return res.json({ id: updated.data.id, name: updated.data.name });
+    } catch (err) {
+      console.error('[api/file PATCH]', err.message);
+      return res.status(500).json({ error: err.message });
+    }
+  }
+
   const { id } = req.query;
   if (!id) return res.status(400).json({ error: 'Missing ?id parameter' });
 
@@ -138,56 +221,6 @@ export default async function handler(req, res) {
       return res.json({ ok: true });
     } catch (err) {
       console.error('[api/file PUT]', err.message);
-      return res.status(500).json({ error: err.message });
-    }
-  }
-
-  // ── POST: create new .md file ──────────────────────────────────────────────
-  if (req.method === 'POST') {
-    try { await requireWriteAccess(req); } catch (e) { return res.status(e.status ?? 500).json({ error: e.message }); }
-    const { folderId } = req.query;
-    const { name } = req.body ?? {};
-    if (!folderId) return res.status(400).json({ error: 'Missing ?folderId parameter' });
-    if (!name || typeof name !== 'string' || !name.trim()) {
-      return res.status(400).json({ error: 'Request body must include { name: string }' });
-    }
-
-    // Sanitise: strip any path separators and ensure .md extension
-    const safeName = name.trim().replace(/[/\\]/g, '').replace(/\.md$/i, '') + '.md';
-
-    try {
-      const rootFolderId = process.env.GOOGLE_DRIVE_FOLDER_ID;
-      // Only allow creating files inside the configured Drive folder tree
-      if (folderId !== rootFolderId) {
-        // Verify the target folder is a child of the root folder
-        const folderMeta = await drive.files.get({
-          fileId: folderId,
-          fields: 'parents',
-          supportsAllDrives: true,
-        });
-        const parents = folderMeta.data.parents ?? [];
-        if (!parents.includes(rootFolderId)) {
-          return res.status(403).json({ error: 'Target folder is outside the allowed Drive tree' });
-        }
-      }
-
-      const created = await drive.files.create({
-        supportsAllDrives: true,
-        requestBody: {
-          name: safeName,
-          mimeType: 'text/plain',
-          parents: [folderId],
-        },
-        media: {
-          mimeType: 'text/plain',
-          body: `# ${safeName.replace('.md', '')}\n`,
-        },
-        fields: 'id, name',
-      });
-
-      return res.status(201).json({ id: created.data.id, name: created.data.name });
-    } catch (err) {
-      console.error('[api/file POST]', err.message);
       return res.status(500).json({ error: err.message });
     }
   }

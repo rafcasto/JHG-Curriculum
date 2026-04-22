@@ -32,16 +32,40 @@ export async function saveDocument(id, content, _uid) {
   return res.json();
 }
 
-/** Create a new .md file in the specified Drive folder. Returns { id, name }. */
-export async function createDocument(name, folderId) {
+/** Create a new .md file in the specified Drive folder. Returns { id, name }.
+ * @param {string} name - File name (without .md extension)
+ * @param {string} folderId - Target Drive folder id
+ * @param {{ tag?: string, categories?: string[], token: string }} opts
+ */
+export async function createDocument(name, folderId, { tag, categories, token } = {}) {
   const res = await fetch(`/api/file?folderId=${encodeURIComponent(folderId)}`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ name }),
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+    body: JSON.stringify({ name, tag, categories }),
   });
   if (!res.ok) {
     const body = await res.json().catch(() => ({}));
     throw new Error(body.error ?? `Create failed (${res.status})`);
+  }
+  return res.json();
+}
+
+/** Rename a .md file in Drive. Returns { id, name }. */
+export async function renameDocument(id, newName, token) {
+  const res = await fetch(`/api/file?id=${encodeURIComponent(id)}`, {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+    body: JSON.stringify({ name: newName }),
+  });
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw new Error(body.error ?? `Rename failed (${res.status})`);
   }
   return res.json();
 }
