@@ -111,13 +111,21 @@ export default async function handler(req, res) {
     try {
       const rootFolderId = process.env.GOOGLE_DRIVE_FOLDER_ID;
       if (folderId !== rootFolderId) {
-        const folderMeta = await drive.files.get({
-          fileId: folderId,
-          fields: 'parents',
-          supportsAllDrives: true,
-        });
-        const parents = folderMeta.data.parents ?? [];
-        if (!parents.includes(rootFolderId)) {
+        // Walk up the ancestor chain to verify folderId lives inside the root
+        let current = folderId;
+        let found = false;
+        for (let depth = 0; depth < 10; depth++) {
+          const folderMeta = await drive.files.get({
+            fileId: current,
+            fields: 'parents',
+            supportsAllDrives: true,
+          });
+          const parents = folderMeta.data.parents ?? [];
+          if (parents.includes(rootFolderId)) { found = true; break; }
+          if (parents.length === 0) break;
+          current = parents[0];
+        }
+        if (!found) {
           return res.status(403).json({ error: 'Target folder is outside the allowed Drive tree' });
         }
       }

@@ -9,7 +9,8 @@ const ASSET_FILTER_OPTIONS = [
   { label: 'Lesson - Example', value: 'Lesson - Example' },
   { label: 'Lesson - Video', value: 'Lesson - Video' },
   { label: 'Homework - Instructions', value: 'Homework - Instructions' },
-  { label: 'Homework - Template example', value: 'Homework - Template example' },
+  { label: 'Homework - Template', value: 'Homework - Template' },
+  { label: 'Homework - Example', value: 'Homework - Example' },
   { label: 'Homework - AI Prompt', value: 'Homework - AI Prompt' },
 ];
 
@@ -20,7 +21,8 @@ function normalizeCategory(cat) {
   if (c.includes('lesson') && c.includes('text')) return 'Lesson - Text';
   if (c.includes('lesson') && c.includes('example')) return 'Lesson - Example';
   if (c.includes('lesson') && c.includes('video')) return 'Lesson - Video';
-  if (c.includes('homework') && c.includes('template')) return 'Homework - Template example';
+  if (c.includes('homework') && c.includes('template')) return 'Homework - Template';
+  if (c.includes('homework') && c.includes('example')) return 'Homework - Example';
   if (c.includes('homework') && (c.includes('instruction') || c.includes('exercise'))) return 'Homework - Instructions';
   if (c.includes('homework') && (c.includes('ai') || c.includes('prompt'))) return 'Homework - AI Prompt';
   return cat;

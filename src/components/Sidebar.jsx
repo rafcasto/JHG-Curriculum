@@ -22,7 +22,8 @@ const CATEGORY_OPTIONS = [
   'Lesson - Example',
   'Lesson - Video',
   'Homework - Instructions',
-  'Homework - Template example',
+  'Homework - Template',
+  'Homework - Example',
   'Homework - AI Prompt',
 ];
 
@@ -94,6 +95,23 @@ export default function Sidebar({ documents, loading = false, onRefresh }) {
       .catch(() => {});
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [canEdit, workspaceFolderId]);
+
+  function openModal() {
+    setShowModal(true);
+    setModalName('');
+    setModalTag('');
+    setModalCategories([]);
+    setModalError(null);
+    setFoldersLoading(true);
+    fetch(foldersUrl())
+      .then((r) => r.json())
+      .then((fols) => {
+        setModalFolders(fols);
+        setModalFolderId(fols[0]?.id ?? '');
+      })
+      .catch((e) => setModalError(e.message))
+      .finally(() => setFoldersLoading(false));
+  }
 
   function openModalForFolder(moduleKey) {
     const matched = folders.find(
@@ -207,6 +225,11 @@ export default function Sidebar({ documents, loading = false, onRefresh }) {
         <button className="graph-nav-btn" onClick={() => navigate('/graph')}>
           ⬡ Graph View
         </button>
+        {canEdit && (
+          <button className="new-file-btn" onClick={openModal}>
+            + New File
+          </button>
+        )}
         <input
           className="sidebar-search"
           type="search"
