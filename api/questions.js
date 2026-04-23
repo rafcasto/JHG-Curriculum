@@ -69,7 +69,7 @@ export default async function handler(req, res) {
     let claims;
     try { claims = await requireAuth(req); } catch (e) { return res.status(e.status ?? 500).json({ error: e.message }); }
 
-    const { touchpoint, activeOnly } = req.query;
+    const { touchpoint, activeOnly, workspaceId } = req.query;
     const isAdmin = claims.role === 'admin';
 
     try {
@@ -82,6 +82,10 @@ export default async function handler(req, res) {
       // Non-admins always see active questions only
       if (!isAdmin || activeOnly === 'true') {
         questions = questions.filter((q) => q.active === true);
+      }
+      // Filter by workspace: return global questions (no workspaceId) + matching workspace questions
+      if (workspaceId) {
+        questions = questions.filter((q) => !q.workspaceId || q.workspaceId === workspaceId);
       }
 
       return res.json(questions);
@@ -99,6 +103,7 @@ export default async function handler(req, res) {
       text, type, touchpoint, order, options = [],
       scaleMin, scaleMax, scaleAnchors = {},
       weight = 0, includedInScore = false, isOptional = false, active = true,
+      workspaceId,
     } = req.body ?? {};
 
     if (!text || typeof text !== 'string' || !text.trim()) {
@@ -125,6 +130,7 @@ export default async function handler(req, res) {
       includedInScore: Boolean(includedInScore),
       isOptional: Boolean(isOptional),
       active: Boolean(active),
+      workspaceId: workspaceId || null,
       createdAt: now,
       updatedAt: now,
     };
@@ -148,7 +154,7 @@ export default async function handler(req, res) {
     const allowed = [
       'text', 'type', 'touchpoint', 'order', 'options',
       'scaleMin', 'scaleMax', 'scaleAnchors',
-      'weight', 'includedInScore', 'isOptional', 'active',
+      'weight', 'includedInScore', 'isOptional', 'active', 'workspaceId',
     ];
     const updates = {};
     for (const key of allowed) {

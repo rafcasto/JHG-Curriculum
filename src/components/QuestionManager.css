@@ -172,6 +172,12 @@
   color: var(--text-secondary);
 }
 
+.qm-badge--workspace {
+  background: rgba(88, 166, 255, 0.1);
+  border-color: rgba(88, 166, 255, 0.3);
+  color: #58a6ff;
+}
+
 .qm-row-actions {
   display: flex;
   align-items: center;

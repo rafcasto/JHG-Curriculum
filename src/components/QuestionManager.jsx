@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { useWorkspace } from '../contexts/WorkspaceContext';
 import './QuestionManager.css';
 
 const TYPE_LABELS = {
@@ -24,6 +25,7 @@ const BLANK_FORM = {
   includedInScore: false,
   isOptional: false,
   active: true,
+  workspaceId: '',
 };
 
 function OptionEditor({ options, onChange }) {
@@ -63,7 +65,7 @@ function OptionEditor({ options, onChange }) {
   );
 }
 
-function QuestionForm({ initial, onSave, onCancel, saving }) {
+function QuestionForm({ initial, onSave, onCancel, saving, workspaces }) {
   const [form, setForm] = useState(() => {
     if (!initial) return { ...BLANK_FORM };
     return {
@@ -80,6 +82,7 @@ function QuestionForm({ initial, onSave, onCancel, saving }) {
       includedInScore: initial.includedInScore ?? false,
       isOptional: initial.isOptional ?? false,
       active: initial.active ?? true,
+      workspaceId: initial.workspaceId ?? '',
     };
   });
 
@@ -99,6 +102,7 @@ function QuestionForm({ initial, onSave, onCancel, saving }) {
       includedInScore: form.includedInScore,
       isOptional: form.isOptional,
       active: form.active,
+      workspaceId: form.workspaceId || null,
       scaleMin: isScaleLike ? Number(form.scaleMin) : null,
       scaleMax: isScaleLike ? Number(form.scaleMax) : null,
       scaleAnchors: isScaleLike ? { min: form.scaleAnchorMin, max: form.scaleAnchorMax } : { min: '', max: '' },
@@ -193,6 +197,16 @@ function QuestionForm({ initial, onSave, onCancel, saving }) {
             Active
           </label>
         </div>
+
+        <div className="qm-form-field">
+          <label className="qm-label">Workspace <span className="qm-hint">(leave blank for all workspaces)</span></label>
+          <select className="qm-input" value={form.workspaceId} onChange={(e) => set('workspaceId', e.target.value)}>
+            <option value="">All workspaces (global)</option>
+            {workspaces.map((ws) => (
+              <option key={ws.id} value={ws.id}>{ws.name}</option>
+            ))}
+          </select>
+        </div>
       </div>
 
       <div className="qm-form-actions">
@@ -205,7 +219,10 @@ function QuestionForm({ initial, onSave, onCancel, saving }) {
   );
 }
 
-function QuestionRow({ question, isFirst, isLast, onReorder, onToggleActive, onEdit, onDelete }) {
+function QuestionRow({ question, isFirst, isLast, onReorder, onToggleActive, onEdit, onDelete, workspaces }) {
+  const wsName = question.workspaceId
+    ? (workspaces.find((w) => w.id === question.workspaceId)?.name ?? question.workspaceId)
+    : null;
   return (
     <div className={`qm-row${!question.active ? ' qm-row--inactive' : ''}`}>
       <div className="qm-row-order">
@@ -221,6 +238,7 @@ function QuestionRow({ question, isFirst, isLast, onReorder, onToggleActive, onE
             <span className="qm-badge qm-badge--weight">w: {question.weight}</span>
           )}
           {question.isOptional && <span className="qm-badge qm-badge--optional">optional</span>}
+          {wsName && <span className="qm-badge qm-badge--workspace">{wsName}</span>}
         </div>
       </div>
       <div className="qm-row-actions">
@@ -239,6 +257,7 @@ function QuestionRow({ question, isFirst, isLast, onReorder, onToggleActive, onE
 }
 
 export default function QuestionManager({ getToken }) {
+  const { workspaces } = useWorkspace();
   const [questions, setQuestions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -378,6 +397,7 @@ export default function QuestionManager({ getToken }) {
             onSave={handleSave}
             onCancel={() => { setShowForm(false); setEditingQuestion(null); }}
             saving={saving}
+            workspaces={workspaces}
           />
         </div>
       )}
@@ -401,6 +421,7 @@ export default function QuestionManager({ getToken }) {
                   onToggleActive={handleToggleActive}
                   onEdit={openEdit}
                   onDelete={handleDelete}
+                  workspaces={workspaces}
                 />
               ))}
             </div>
@@ -418,6 +439,7 @@ export default function QuestionManager({ getToken }) {
                   onToggleActive={handleToggleActive}
                   onEdit={openEdit}
                   onDelete={handleDelete}
+                  workspaces={workspaces}
                 />
               ))}
             </div>

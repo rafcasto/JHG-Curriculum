@@ -3,6 +3,7 @@ import { useParams, useNavigate, useOutletContext } from 'react-router-dom';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { useAuth } from '../contexts/AuthContext';
+import { useWorkspace } from '../contexts/WorkspaceContext';
 import { fetchDocument, saveDocument, deleteDocument } from '../hooks/useDocuments';
 import RichTextEditor from '../components/RichTextEditor';
 import GraphView, { DEFAULT_SETTINGS } from '../components/GraphView';
@@ -51,6 +52,8 @@ export default function FilePage() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { user, role } = useAuth();
+  const { currentWorkspace } = useWorkspace();
+  const workspaceId = currentWorkspace?.id ?? null;
   const { refreshDocuments, onReviewSubmissionUpdated } = useOutletContext() ?? {};
 
   const [doc, setDoc] = useState(null);
@@ -68,6 +71,7 @@ export default function FilePage() {
   // Reviewer submission state
   const [submission, setSubmission] = useState(null);
   const [submissionChecked, setSubmissionChecked] = useState(false);
+  const [hasPreQuestions, setHasPreQuestions] = useState(null); // null = loading
 
   // Reviewer modal state
   const [showPreSurveyModal, setShowPreSurveyModal] = useState(false);
@@ -105,6 +109,7 @@ export default function FilePage() {
     setDirty(false);
     setSubmission(null);
     setSubmissionChecked(false);
+    setHasPreQuestions(null);
     fetchDocument(id)
       .then((data) => {
         if (!data) {
@@ -118,23 +123,34 @@ export default function FilePage() {
       .finally(() => setLoading(false));
   }, [id]);
 
-  // For reviewer: check for an existing submission when doc is loaded
+  // For reviewer: check for an existing submission + whether pre-questions are active
   useEffect(() => {
     if (role !== 'reviewer' || !id || !user) return;
     let cancelled = false;
     async function checkSubmission() {
       try {
         const token = await user.getIdToken();
-        const res = await fetch(
-          `/api/submissions?documentId=${encodeURIComponent(id)}`,
-          { headers: { Authorization: `Bearer ${token}` } }
-        );
-        if (res.ok) {
-          const data = await res.json();
+        const [subRes, preQRes] = await Promise.all([
+          fetch(`/api/submissions?documentId=${encodeURIComponent(id)}`, {
+            headers: { Authorization: `Bearer ${token}` },
+          }),
+          fetch('/api/questions?touchpoint=pre&activeOnly=true' + (workspaceId ? `&workspaceId=${encodeURIComponent(workspaceId)}` : ''), {
+            headers: { Authorization: `Bearer ${token}` },
+          }),
+        ]);
+        if (subRes.ok) {
+          const data = await subRes.json();
           if (!cancelled) setSubmission(data);
+        }
+        if (preQRes.ok) {
+          const preQs = await preQRes.json();
+          if (!cancelled) setHasPreQuestions(preQs.length > 0);
+        } else {
+          if (!cancelled) setHasPreQuestions(false);
         }
       } catch {
         // no existing submission is fine
+        if (!cancelled) setHasPreQuestions(false);
       } finally {
         if (!cancelled) setSubmissionChecked(true);
       }
@@ -268,6 +284,7 @@ export default function FilePage() {
           reviewDuration={frozenDuration ?? elapsedSeconds}
           onSubmitted={handlePostSurveySubmitted}
           onClose={() => setShowPostSurveyModal(false)}
+          workspaceId={workspaceId}
         />
       )}
 
@@ -440,7 +457,27 @@ export default function FilePage() {
             <div className="file-start-overlay">
               <button
                 className="file-start-btn"
-                onClick={() => setShowPreSurveyModal(true)}
+                disabled={hasPreQuestions === null}
+                onClick={async () => {
+                  if (hasPreQuestions) {
+                    setShowPreSurveyModal(true);
+                  } else {
+                    // No active pre-questions — create draft submission directly
+                    try {
+                      const token = await user.getIdToken();
+                      const res = await fetch('/api/submissions', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+                        body: JSON.stringify({ documentId: id }),
+                      });
+                      const data = await res.json();
+                      if (!res.ok) throw new Error(data.error ?? 'Failed to start review');
+                      handlePreSurveySubmitted(data);
+                    } catch (e) {
+                      setError(e.message);
+                    }
+                  }
+                }}
               >
                 Start Review
               </button>

@@ -20,6 +20,7 @@ export default function PostSurveyModal({
   reviewDuration,
   onSubmitted,
   onClose,
+  workspaceId,
 }) {
   return (
     <div className="rmodal-backdrop">
@@ -33,6 +34,7 @@ export default function PostSurveyModal({
           submission={submission}
           reviewDuration={reviewDuration}
           onSubmitted={onSubmitted}
+          workspaceId={workspaceId}
         />
       </div>
     </div>

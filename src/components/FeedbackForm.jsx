@@ -90,14 +90,14 @@ function OpenTextQuestion({ question, value, onChange }) {
       className="ff-textarea"
       value={value ?? ''}
       onChange={(e) => onChange(e.target.value || null)}
-      placeholder="Share your thoughts… (optional)"
+      placeholder="Share your thoughts…"
       rows={3}
     />
   );
 }
 
 function QuestionBlock({ question, response, onChange }) {
-  const required = !question.isOptional && question.type !== 'open_text';
+  const required = !question.isOptional;
   return (
     <div className="ff-question">
       <p className="ff-question-text">
@@ -166,7 +166,7 @@ function ThankYouCard({ submission }) {
  *   reviewDuration — elapsed review time in seconds (optional)
  *   onSubmitted    — called with updated submission on successful submit
  */
-export default function FeedbackForm({ documentId, user, submission, reviewDuration, onSubmitted }) {
+export default function FeedbackForm({ documentId, user, submission, reviewDuration, onSubmitted, workspaceId }) {
   const [questions, setQuestions] = useState([]);
   const [responses, setResponses] = useState({});
   const [loading, setLoading] = useState(true);
@@ -187,7 +187,8 @@ export default function FeedbackForm({ documentId, user, submission, reviewDurat
     async function loadQuestions() {
       try {
         const token = await user.getIdToken();
-        const res = await fetch('/api/questions?touchpoint=post&activeOnly=true', {
+        const wsParam = workspaceId ? `&workspaceId=${encodeURIComponent(workspaceId)}` : '';
+        const res = await fetch(`/api/questions?touchpoint=post&activeOnly=true${wsParam}`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         if (!res.ok) throw new Error('Failed to load questions');
@@ -209,7 +210,7 @@ export default function FeedbackForm({ documentId, user, submission, reviewDurat
 
   function validate() {
     for (const q of questions) {
-      if (q.isOptional || q.type === 'open_text') continue;
+      if (q.isOptional) continue;
       const r = responses[q.id];
       if (r === undefined || r === null) return `Please answer: "${q.text.slice(0, 60)}"`;
     }

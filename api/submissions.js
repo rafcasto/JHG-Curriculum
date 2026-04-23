@@ -193,9 +193,16 @@ export default async function handler(req, res) {
     if (!documentId || typeof documentId !== 'string') {
       return res.status(400).json({ error: 'documentId is required' });
     }
-    const warmup = Number(warmupAnswer);
-    if (!Number.isInteger(warmup) || warmup < 1 || warmup > 4) {
-      return res.status(400).json({ error: 'warmupAnswer must be an integer 1–4' });
+
+    // warmupAnswer is optional — when absent (no active pre-questions), confidence delta is skipped
+    let warmup = null;
+    let warmupMappedScore = null;
+    if (warmupAnswer !== undefined && warmupAnswer !== null) {
+      warmup = Number(warmupAnswer);
+      if (!Number.isInteger(warmup) || warmup < 1 || warmup > 4) {
+        return res.status(400).json({ error: 'warmupAnswer must be an integer 1–4' });
+      }
+      warmupMappedScore = mapWarmup(warmup);
     }
 
     const submissionId = `${claims.uid}_${documentId}`;
@@ -206,9 +213,8 @@ export default async function handler(req, res) {
       return res.status(409).json({ error: 'Submission already completed' });
     }
 
-    const warmupMappedScore = mapWarmup(warmup);
     try {
-      await db.collection('submissions').doc(submissionId).set({
+      const docData = {
         id: submissionId,
         documentId,
         userId: claims.uid,
@@ -223,7 +229,8 @@ export default async function handler(req, res) {
         questionsSnapshot: [],
         submittedAt: null,
         formVersion: null,
-      }, { merge: true });
+      };
+      await db.collection('submissions').doc(submissionId).set(docData, { merge: true });
 
       return res.status(201).json({
         submissionId,
@@ -286,7 +293,7 @@ export default async function handler(req, res) {
         .sort((a, b) => a.order - b.order)[0];
       const confidenceRaw = confidenceQ ? Number(responses[confidenceQ.id]) : null;
       const confidenceDelta =
-        confidenceRaw !== null && !isNaN(confidenceRaw)
+        confidenceRaw !== null && !isNaN(confidenceRaw) && submission.warmupMappedScore != null
           ? Math.round((confidenceRaw - submission.warmupMappedScore) * 100) / 100
           : null;
 
