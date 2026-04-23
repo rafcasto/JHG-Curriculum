@@ -386,9 +386,11 @@ export default function FeedbackDashboard({ getToken, users }) {
   }
 
   // Group submissions by documentId and compute per-document aggregates
+  // Only include documents that belong to the current workspace (present in docMap)
   const docRows = useMemo(() => {
     const groups = {};
     for (const s of submissions) {
+      if (!(s.documentId in docMap)) continue;
       if (!groups[s.documentId]) groups[s.documentId] = [];
       groups[s.documentId].push(s);
     }
@@ -426,15 +428,15 @@ export default function FeedbackDashboard({ getToken, users }) {
 
       return { docId, subs, count, avgCQS, avgDelta, avgWarmup, questionAvgs };
     }).sort((a, b) => (b.count - a.count));
-  }, [submissions, ratingQuestions]);
+  }, [submissions, ratingQuestions, docMap]);
 
-  // Summary stats
-  const totalSubmissions = submissions.length;
+  // Summary stats — scoped to current workspace via docRows
+  const totalSubmissions = docRows.reduce((sum, r) => sum + r.count, 0);
   const totalDocs = docRows.length;
   const overallAvgCQS = useMemo(() => {
-    const vals = submissions.map((s) => s.contentQualityScore).filter((v) => v != null);
+    const vals = docRows.flatMap((r) => r.subs.map((s) => s.contentQualityScore)).filter((v) => v != null);
     return vals.length ? vals.reduce((a, b) => a + b, 0) / vals.length : null;
-  }, [submissions]);
+  }, [docRows]);
 
   // Active visible rating questions (preserving question order)
   const activeCols = useMemo(
