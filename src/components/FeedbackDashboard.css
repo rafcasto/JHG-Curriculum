@@ -248,6 +248,33 @@
   font-variant-numeric: tabular-nums;
 }
 
+/* ── Warmup star rating ───────────────────────────────────────────────────── */
+.fd-stars {
+  display: inline-flex;
+  gap: 1px;
+  cursor: default;
+}
+
+.fd-star-wrap {
+  position: relative;
+  display: inline-block;
+  font-size: 0.9rem;
+  line-height: 1;
+}
+
+.fd-star-bg {
+  color: var(--bg-tertiary, #30363d);
+}
+
+.fd-star-fill {
+  position: absolute;
+  top: 0;
+  left: 0;
+  overflow: hidden;
+  color: #e3b341;
+  white-space: nowrap;
+}
+
 .fd-empty-cell {
   color: var(--text-secondary);
 }

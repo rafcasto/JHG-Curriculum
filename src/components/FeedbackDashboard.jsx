@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import { useWorkspace } from '../contexts/WorkspaceContext';
 import './FeedbackDashboard.css';
 
 // ── Constants ─────────────────────────────────────────────────────────────
@@ -59,6 +60,25 @@ function formatDuration(secs) {
 }
 
 const STORAGE_KEY = 'fd_visible_question_cols';
+
+// ── Star Rating (avg out of 4 for warmup) ─────────────────────────────────
+
+function StarRating({ value, max = 4 }) {
+  if (value == null) return <span className="fd-empty-cell">—</span>;
+  return (
+    <span className="fd-stars" title={`${Number(value).toFixed(1)} / ${max}`}>
+      {Array.from({ length: max }, (_, i) => {
+        const fill = Math.min(1, Math.max(0, value - i));
+        return (
+          <span key={i} className="fd-star-wrap">
+            <span className="fd-star-bg">★</span>
+            <span className="fd-star-fill" style={{ width: `${fill * 100}%` }}>★</span>
+          </span>
+        );
+      })}
+    </span>
+  );
+}
 
 // ── Column Picker ─────────────────────────────────────────────────────────
 
@@ -278,6 +298,7 @@ function DetailPanel({ documentName, submissions, users, colSpan }) {
  *   users    — [{ uid, email }]       — from AdminPage
  */
 export default function FeedbackDashboard({ getToken, users }) {
+  const { workspaces } = useWorkspace();
   const [submissions, setSubmissions] = useState([]);
   const [questions, setQuestions] = useState([]);
   const [docMap, setDocMap] = useState({}); // documentId -> title
@@ -291,7 +312,7 @@ export default function FeedbackDashboard({ getToken, users }) {
     } catch { return []; }
   });
 
-  // Load submissions + questions in parallel
+  // Load submissions + questions in parallel; wait for workspaces to resolve doc titles
   useEffect(() => {
     let cancelled = false;
     async function load() {
@@ -301,33 +322,39 @@ export default function FeedbackDashboard({ getToken, users }) {
         const token = await getToken();
         const headers = { Authorization: `Bearer ${token}` };
 
-        const [subRes, qRes, filesRes] = await Promise.all([
+        const [subRes, qRes] = await Promise.all([
           fetch('/api/submissions?admin=true', { headers }),
           fetch('/api/questions?touchpoint=post', { headers }),
-          fetch('/api/files', { headers }),
         ]);
 
-        const [subData, qData, filesData] = await Promise.all([
-          subRes.json(),
-          qRes.json(),
-          filesRes.json(),
-        ]);
+        const [subData, qData] = await Promise.all([subRes.json(), qRes.json()]);
 
         if (!subRes.ok) throw new Error(subData.error ?? 'Failed to load submissions');
         if (!qRes.ok) throw new Error(qData.error ?? 'Failed to load questions');
 
+        // Fetch files from every workspace folder in parallel to build docId → title map
+        const folderIds = workspaces.map((w) => w.driveFolderId).filter(Boolean);
+        const uniqueFolderIds = [...new Set(folderIds)];
+        const filesResults = await Promise.all(
+          uniqueFolderIds.map((fid) =>
+            fetch(`/api/files?folderId=${encodeURIComponent(fid)}`, { headers })
+              .then((r) => r.json())
+              .catch(() => [])
+          )
+        );
+        const map = {};
+        for (const files of filesResults) {
+          if (Array.isArray(files)) {
+            files.forEach((f) => { if (f.id) map[f.id] = f.title ?? f.id; });
+          }
+        }
+
         if (!cancelled) {
           setSubmissions(subData);
           setQuestions(qData);
-
-          // Build docId -> title map from files
-          const map = {};
-          if (Array.isArray(filesData)) {
-            filesData.forEach((f) => { if (f.id) map[f.id] = f.title ?? f.id; });
-          }
           setDocMap(map);
 
-          // Auto-select all rating questions as visible if first load (no saved preference)
+          // Auto-select all rating questions as visible if no saved preference
           const savedCols = (() => {
             try { return JSON.parse(localStorage.getItem(STORAGE_KEY)); } catch { return null; }
           })();
@@ -347,7 +374,7 @@ export default function FeedbackDashboard({ getToken, users }) {
     }
     load();
     return () => { cancelled = true; };
-  }, [getToken]);
+  }, [getToken, workspaces]);
 
   // Rating-type post questions (toggleable columns)
   const ratingQuestions = useMemo(
@@ -514,8 +541,8 @@ export default function FeedbackDashboard({ getToken, users }) {
                       <td className={`fd-num ${DELTA_CLASS(row.avgDelta)}`}>
                         {fmtDelta(row.avgDelta)}
                       </td>
-                      <td className="fd-num">
-                        {row.avgWarmup != null ? fmt(row.avgWarmup) : <span className="fd-empty-cell">—</span>}
+                      <td>
+                        <StarRating value={row.avgWarmup} max={4} />
                       </td>
                       {activeCols.map((q) => (
                         <td key={q.id} className="fd-num">
