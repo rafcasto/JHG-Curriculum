@@ -18,11 +18,13 @@ export async function fetchDocument(id) {
   return res.json();
 }
 
-/** uid is accepted but unused — Drive tracks edits via the service account. */
-export async function saveDocument(id, content, _uid) {
+export async function saveDocument(id, content, token) {
   const res = await fetch(`/api/file?id=${encodeURIComponent(id)}`, {
     method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
     body: JSON.stringify({ content }),
   });
   if (!res.ok) {
@@ -71,9 +73,12 @@ export async function renameDocument(id, newName, token) {
 }
 
 /** Move a .md file to the Drive trash. */
-export async function deleteDocument(id) {
+export async function deleteDocument(id, token) {
   const res = await fetch(`/api/file?id=${encodeURIComponent(id)}`, {
     method: 'DELETE',
+    headers: {
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
   });
   if (!res.ok) {
     const body = await res.json().catch(() => ({}));

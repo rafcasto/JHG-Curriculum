@@ -147,7 +147,8 @@ export default function FilePage() {
     if (!doc || saving) return;
     setSaving(true);
     try {
-      await saveDocument(id, content, user.uid);
+      const token = await user.getIdToken();
+      await saveDocument(id, content, token);
       setDoc((prev) => ({ ...prev, content }));
       setDirty(false);
       setSaved(true);
@@ -164,7 +165,8 @@ export default function FilePage() {
     if (!window.confirm(`Delete "${doc.title}"? It will be moved to the Drive trash.`)) return;
     setDeleting(true);
     try {
-      await deleteDocument(id);
+      const token = await user.getIdToken();
+      await deleteDocument(id, token);
       refreshDocuments?.();
       navigate('/graph', { replace: true });
     } catch (e) {
