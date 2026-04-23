@@ -145,7 +145,23 @@ export default async function handler(req, res) {
     let claims;
     try { claims = await requireAuth(req); } catch (e) { return res.status(e.status ?? 500).json({ error: e.message }); }
 
-    const { documentId, all } = req.query;
+    const { documentId, all, admin } = req.query;
+
+    // Admin: list ALL complete submissions across all documents
+    if (!documentId && admin === 'true') {
+      if (claims.role !== 'admin') return res.status(403).json({ error: 'Forbidden — admin role required' });
+      try {
+        const snapshot = await db.collection('submissions')
+          .where('status', '==', 'complete')
+          .orderBy('submittedAt', 'desc')
+          .get();
+        return res.json(snapshot.docs.map((d) => ({ id: d.id, ...d.data() })));
+      } catch (e) {
+        console.error('[api/submissions GET admin]', e.message);
+        return res.status(500).json({ error: e.message });
+      }
+    }
+
     if (!documentId) return res.status(400).json({ error: 'Missing ?documentId parameter' });
 
     try {

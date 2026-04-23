@@ -23,6 +23,14 @@
         { "fieldPath": "active", "order": "ASCENDING" },
         { "fieldPath": "touchpoint", "order": "ASCENDING" }
       ]
+    },
+    {
+      "collectionGroup": "submissions",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "status", "order": "ASCENDING" },
+        { "fieldPath": "submittedAt", "order": "DESCENDING" }
+      ]
     }
   ],
   "fieldOverrides": []

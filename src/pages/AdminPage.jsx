@@ -4,6 +4,7 @@ import { useWorkspace } from '../contexts/WorkspaceContext';
 import { useNavigate } from 'react-router-dom';
 import QuestionManager from '../components/QuestionManager';
 import EarlyAccessManager from '../components/EarlyAccessManager';
+import FeedbackDashboard from '../components/FeedbackDashboard';
 import './AdminPage.css';
 
 const ROLES = ['admin', 'editor', 'viewer', 'reviewer'];
@@ -422,6 +423,7 @@ export default function AdminPage() {
     { id: 'workspaces', label: 'Workspaces' },
     { id: 'users', label: 'Users' },
     { id: 'questions', label: 'Questions' },
+    { id: 'feedback', label: 'Feedback' },
     { id: 'early-access', label: 'Early Access' },
   ];
 
@@ -451,6 +453,10 @@ export default function AdminPage() {
 
       {activeTab === 'early-access' && (
         <EarlyAccessManager getToken={getToken} />
+      )}
+
+      {activeTab === 'feedback' && (
+        <FeedbackDashboard getToken={getToken} users={users} />
       )}
 
       {activeTab === 'users' && (
