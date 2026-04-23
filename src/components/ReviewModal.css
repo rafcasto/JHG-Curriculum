@@ -17,8 +17,8 @@
 /* ── Card ────────────────────────────────────────────────────────────────── */
 .rmodal-card {
   position: relative;
-  background: #161b22;
-  border: 1px solid #30363d;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
   border-radius: 14px;
   width: 100%;
   max-width: 520px;
@@ -46,7 +46,7 @@
   right: 1rem;
   background: none;
   border: none;
-  color: #484f58;
+  color: var(--text-muted);
   font-size: 1rem;
   cursor: pointer;
   width: 28px;
@@ -61,6 +61,6 @@
 }
 
 .rmodal-close:hover {
-  background: #21262d;
-  color: #e6edf3;
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
 }

@@ -2,11 +2,13 @@ import { useRef, useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useWorkspace } from '../contexts/WorkspaceContext';
+import { useTheme } from '../contexts/ThemeContext';
 import './Navbar.css';
 
 export default function Navbar() {
   const { user, role, signOut } = useAuth();
   const { workspaces, currentWorkspace, setCurrentWorkspace } = useWorkspace();
+  const { theme, toggleTheme } = useTheme();
   const navigate = useNavigate();
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const dropdownRef = useRef(null);
@@ -89,6 +91,14 @@ export default function Navbar() {
         {role === 'editor' && <span className="role-badge role-badge--editor">Editor</span>}
         {role === 'reviewer' && <span className="role-badge role-badge--reviewer">Reviewer</span>}
         <span className="navbar-email">{user?.email}</span>
+        <button
+          className="theme-toggle-btn"
+          onClick={toggleTheme}
+          aria-label={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+          title={theme === 'dark' ? 'Light mode' : 'Dark mode'}
+        >
+          {theme === 'dark' ? '☀️' : '🌙'}
+        </button>
         <button className="signout-btn" onClick={handleSignOut}>
           Sign out
         </button>

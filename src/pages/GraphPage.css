@@ -2,7 +2,7 @@
   position: relative;
   width: 100%;
   height: 100%;
-  background: #0d1117;
+  background: var(--bg-primary);
   display: flex;
   flex-direction: column;
 }
@@ -13,15 +13,15 @@
   align-items: center;
   gap: 0.75rem;
   padding: 0.5rem 1rem;
-  background: #161b22;
-  border-bottom: 1px solid #30363d;
+  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border-color);
   flex-shrink: 0;
   z-index: 10;
 }
 
 .view-toggle {
   display: flex;
-  border: 1px solid #30363d;
+  border: 1px solid var(--border-color);
   border-radius: 6px;
   overflow: hidden;
 }
@@ -32,7 +32,7 @@
   gap: 0.375rem;
   background: transparent;
   border: none;
-  color: #8b949e;
+  color: var(--text-secondary);
   padding: 0.3rem 0.75rem;
   font-size: 0.8rem;
   font-family: inherit;
@@ -41,18 +41,18 @@
 }
 
 .view-toggle button:hover {
-  background: #21262d;
-  color: #c9d1d9;
+  background: var(--bg-tertiary);
+  color: var(--text-body);
 }
 
 .view-toggle button.active {
-  background: #30363d;
-  color: #e6edf3;
+  background: var(--border-color);
+  color: var(--text-primary);
 }
 
 .graph-toolbar-counts {
   font-size: 0.75rem;
-  color: #484f58;
+  color: var(--text-muted);
   margin-left: auto;
 }
 
@@ -72,7 +72,7 @@
   align-items: center;
   justify-content: center;
   height: 100%;
-  color: #8b949e;
+  color: var(--text-secondary);
   gap: 1rem;
 }
 
@@ -83,12 +83,12 @@
   display: flex;
   gap: 1rem;
   flex-wrap: wrap;
-  background: rgba(22, 27, 34, 0.92);
-  border: 1px solid #30363d;
+  background: color-mix(in srgb, var(--bg-secondary) 92%, transparent);
+  border: 1px solid var(--border-color);
   border-radius: 8px;
   padding: 0.5rem 0.875rem;
   font-size: 0.75rem;
-  color: #8b949e;
+  color: var(--text-secondary);
   backdrop-filter: blur(4px);
   z-index: 5;
   pointer-events: none;

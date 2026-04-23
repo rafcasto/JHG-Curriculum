@@ -1,7 +1,7 @@
 .ff-container {
-  border-top: 1px solid #21262d;
+  border-top: 1px solid var(--border-subtle);
   padding: 2rem 1.75rem;
-  background: #0d1117;
+  background: var(--bg-primary);
   flex-shrink: 0;
 }
 
@@ -16,7 +16,7 @@
   background: rgba(188, 140, 255, 0.12);
   border: 1px solid rgba(188, 140, 255, 0.3);
   border-radius: 12px;
-  color: #bc8cff;
+  color: var(--color-purple);
   font-size: 0.75rem;
   font-weight: 600;
   letter-spacing: 0.04em;
@@ -27,7 +27,7 @@
 
 .ff-subtitle {
   font-size: 0.9375rem;
-  color: #8b949e;
+  color: var(--text-secondary);
   margin: 0;
 }
 
@@ -49,19 +49,19 @@
 .ff-question-text {
   font-size: 0.9375rem;
   font-weight: 600;
-  color: #e6edf3;
+  color: var(--text-primary);
   margin: 0;
   line-height: 1.45;
 }
 
 .ff-required {
-  color: #f85149;
+  color: var(--color-error);
 }
 
 .ff-optional {
   font-size: 0.8125rem;
   font-weight: 400;
-  color: #8b949e;
+  color: var(--text-secondary);
 }
 
 /* ── Scale ───────────────────────────────────────────────────────────────── */
@@ -78,10 +78,10 @@
 }
 
 .ff-scale-btn {
-  background: #161b22;
-  border: 1px solid #30363d;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
   border-radius: 6px;
-  color: #8b949e;
+  color: var(--text-secondary);
   cursor: pointer;
   font-size: 0.875rem;
   font-weight: 600;
@@ -91,21 +91,21 @@
 }
 
 .ff-scale-btn:hover {
-  border-color: #58a6ff;
-  color: #58a6ff;
+  border-color: var(--accent);
+  color: var(--accent);
 }
 
 .ff-scale-btn.selected {
-  background: rgba(88, 166, 255, 0.12);
-  border-color: #58a6ff;
-  color: #58a6ff;
+  background: var(--accent-subtle);
+  border-color: var(--accent);
+  color: var(--accent);
 }
 
 .ff-scale-anchors {
   display: flex;
   justify-content: space-between;
   font-size: 0.75rem;
-  color: #8b949e;
+  color: var(--text-secondary);
   padding: 0 2px;
 }
 
@@ -121,7 +121,7 @@
 .ff-star {
   background: none;
   border: none;
-  color: #30363d;
+  color: var(--border-color);
   cursor: pointer;
   font-size: 1.75rem;
   padding: 0 0.1rem;
@@ -131,7 +131,7 @@
 
 .ff-star:hover,
 .ff-star.active {
-  color: #e3b341;
+  color: var(--color-gold);
 }
 
 .ff-star:hover {
@@ -142,7 +142,7 @@
   display: flex;
   justify-content: space-between;
   font-size: 0.75rem;
-  color: #8b949e;
+  color: var(--text-secondary);
 }
 
 /* ── Single choice ────────────────────────────────────────────────────────── */
@@ -157,26 +157,26 @@
   display: flex;
   align-items: center;
   gap: 0.625rem;
-  background: #161b22;
-  border: 1px solid #30363d;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
   border-radius: 8px;
-  color: #e6edf3;
+  color: var(--text-primary);
   cursor: pointer;
   padding: 0.625rem 0.875rem;
   transition: border-color 0.15s, background 0.15s;
 }
 
 .ff-choice:hover {
-  border-color: #484f58;
+  border-color: var(--text-muted);
 }
 
 .ff-choice.selected {
-  background: rgba(88, 166, 255, 0.08);
-  border-color: rgba(88, 166, 255, 0.4);
+  background: var(--accent-subtle);
+  border-color: var(--accent-dim);
 }
 
 .ff-choice input[type='radio'] {
-  accent-color: #58a6ff;
+  accent-color: var(--accent);
   flex-shrink: 0;
 }
 
@@ -187,10 +187,10 @@
 /* ── Open text ────────────────────────────────────────────────────────────── */
 
 .ff-textarea {
-  background: #161b22;
-  border: 1px solid #30363d;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
   border-radius: 8px;
-  color: #e6edf3;
+  color: var(--text-primary);
   font-family: inherit;
   font-size: 0.875rem;
   line-height: 1.5;
@@ -203,17 +203,17 @@
 }
 
 .ff-textarea:focus {
-  border-color: #58a6ff;
+  border-color: var(--accent);
 }
 
 .ff-textarea::placeholder {
-  color: #484f58;
+  color: var(--text-muted);
 }
 
 /* ── Submit ──────────────────────────────────────────────────────────────── */
 
 .ff-error {
-  color: #f85149;
+  color: var(--color-error);
   font-size: 0.875rem;
   margin: -0.75rem 0 0;
 }
@@ -270,7 +270,7 @@
   background: rgba(63, 185, 80, 0.15);
   border: 1px solid rgba(63, 185, 80, 0.35);
   border-radius: 50%;
-  color: #3fb950;
+  color: var(--color-success);
   font-size: 1.125rem;
   font-weight: 700;
 }
@@ -278,13 +278,13 @@
 .ff-thankyou-title {
   font-size: 1.0625rem;
   font-weight: 700;
-  color: #e6edf3;
+  color: var(--text-primary);
   margin: 0.25rem 0 0;
 }
 
 .ff-thankyou-subtitle {
   font-size: 0.875rem;
-  color: #8b949e;
+  color: var(--text-secondary);
   margin: 0;
 }
 
@@ -292,8 +292,8 @@
   display: flex;
   align-items: center;
   gap: 0.875rem;
-  background: rgba(22, 27, 34, 0.8);
-  border: 1px solid rgba(139, 148, 158, 0.2);
+  background: var(--bg-hover);
+  border: 1px solid var(--border-subtle);
   border-radius: 10px;
   padding: 0.75rem 1rem;
   margin-top: 0.5rem;
@@ -302,7 +302,7 @@
 .ff-score-value {
   font-size: 2rem;
   font-weight: 800;
-  color: var(--score-color, #e6edf3);
+  color: var(--score-color, var(--text-primary));
   line-height: 1;
 }
 
@@ -315,16 +315,16 @@
 .ff-score-interp {
   font-size: 1rem;
   font-weight: 700;
-  color: var(--score-color, #e6edf3);
+  color: var(--score-color, var(--text-primary));
 }
 
 .ff-score-note {
   font-size: 0.8125rem;
-  color: #8b949e;
+  color: var(--text-secondary);
 }
 
 .ff-delta {
   font-size: 0.8125rem;
-  color: #8b949e;
+  color: var(--text-secondary);
   margin: 0.25rem 0 0;
 }

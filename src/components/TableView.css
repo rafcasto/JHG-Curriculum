@@ -2,8 +2,8 @@
   flex: 1;
   display: flex;
   flex-direction: column;
-  background: #0d1117;
-  color: #e6edf3;
+  background: var(--bg-primary);
+  color: var(--text-primary);
   overflow: hidden;
   min-height: 0;
 }
@@ -14,15 +14,15 @@
   align-items: center;
   gap: 0.75rem;
   padding: 0.75rem 1.25rem;
-  background: #161b22;
-  border-bottom: 1px solid #30363d;
+  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border-color);
   flex-shrink: 0;
 }
 
 .table-filters select {
-  background: #0d1117;
-  color: #c9d1d9;
-  border: 1px solid #30363d;
+  background: var(--bg-primary);
+  color: var(--text-body);
+  border: 1px solid var(--border-color);
   border-radius: 6px;
   padding: 0.35rem 0.6rem;
   font-size: 0.8rem;
@@ -34,13 +34,13 @@
 
 .table-filters select:hover,
 .table-filters select:focus {
-  border-color: #58a6ff;
+  border-color: var(--accent);
 }
 
 .table-count {
   margin-left: auto;
   font-size: 0.75rem;
-  color: #8b949e;
+  color: var(--text-secondary);
 }
 
 /* ── Scrollable table container ── */
@@ -61,7 +61,7 @@
   position: sticky;
   top: 0;
   z-index: 1;
-  background: #161b22;
+  background: var(--bg-secondary);
 }
 
 .table-main th {
@@ -69,34 +69,34 @@
   padding: 0.6rem 1.25rem;
   font-size: 0.75rem;
   font-weight: 600;
-  color: #8b949e;
+  color: var(--text-secondary);
   text-transform: uppercase;
   letter-spacing: 0.04em;
-  border-bottom: 1px solid #30363d;
+  border-bottom: 1px solid var(--border-color);
   white-space: nowrap;
 }
 
 .table-main tbody tr {
   cursor: pointer;
-  border-bottom: 1px solid #21262d;
+  border-bottom: 1px solid var(--border-subtle);
   transition: background 0.1s;
 }
 
 .table-main tbody tr:hover {
-  background: #161b22;
+  background: var(--bg-secondary);
 }
 
 .table-main td {
   padding: 0.6rem 1.25rem;
   vertical-align: middle;
-  color: #c9d1d9;
+  color: var(--text-body);
 }
 
 /* ── Column widths ── */
 .col-name {
   width: 45%;
   font-weight: 500;
-  color: #58a6ff;
+  color: var(--accent);
 }
 
 .col-name:hover {
@@ -118,8 +118,8 @@
 /* ── Pills ── */
 .tag-pill {
   display: inline-block;
-  background: rgba(88, 166, 255, 0.12);
-  color: #58a6ff;
+  background: var(--accent-subtle);
+  color: var(--accent);
   border: 1px solid rgba(88, 166, 255, 0.25);
   border-radius: 4px;
   padding: 0.15rem 0.5rem;
@@ -131,7 +131,7 @@
 .asset-pill {
   display: inline-block;
   background: rgba(63, 185, 80, 0.1);
-  color: #3fb950;
+  color: var(--color-success);
   border: 1px solid rgba(63, 185, 80, 0.2);
   border-radius: 4px;
   padding: 0.15rem 0.5rem;
@@ -140,12 +140,12 @@
 }
 
 .empty-cell {
-  color: #484f58;
+  color: var(--text-muted);
 }
 
 /* ── Empty state ── */
 .empty-state {
   text-align: center;
-  color: #8b949e;
+  color: var(--text-secondary);
   padding: 3rem 1.25rem;
 }

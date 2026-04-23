@@ -1,6 +1,7 @@
 import { useEffect, useRef, useCallback, useMemo } from 'react';
 import * as d3 from 'd3';
 import { useNavigate } from 'react-router-dom';
+import { useTheme } from '../contexts/ThemeContext';
 
 const TYPE_COLORS = {
   roadmap:  '#f0883e',
@@ -25,8 +26,8 @@ export function buildModuleColors(sortedNames) {
   return colors;
 }
 
-function getNodeColor(node, colorBy = 'module', moduleColors = {}) {
-  if (node.isTagNode) return 'rgba(255,255,255,0.08)';
+function getNodeColor(node, colorBy = 'module', moduleColors = {}, tagNodeFill = 'rgba(255,255,255,0.08)') {
+  if (node.isTagNode) return tagNodeFill;
   if (colorBy === 'type') return TYPE_COLORS[node.type] ?? TYPE_COLORS.default;
   return moduleColors[node.module] ?? TYPE_COLORS[node.type] ?? TYPE_COLORS.default;
 }
@@ -59,6 +60,7 @@ export default function GraphView({ graphData, documents, settings: settingsProp
   const svgRef    = useRef(null);
   const zoomRef   = useRef(null);
   const navigate  = useNavigate();
+  const { theme } = useTheme();
   const settings  = useMemo(() => ({ ...DEFAULT_SETTINGS, ...(settingsProp ?? {}) }), [settingsProp]);
 
   // Normalise input into { nodes, links }
@@ -76,6 +78,21 @@ export default function GraphView({ graphData, documents, settings: settingsProp
 
   const buildGraph = useCallback(() => {
     if (!rawData?.nodes?.length || !svgRef.current) return;
+
+    // Read theme-aware colors from CSS variables
+    const st = getComputedStyle(document.documentElement);
+    const C = {
+      bg:         st.getPropertyValue('--bg-primary').trim(),
+      bgSecondary:st.getPropertyValue('--bg-secondary').trim(),
+      border:     st.getPropertyValue('--border-color').trim(),
+      textMuted:  st.getPropertyValue('--text-secondary').trim(),
+      textBody:   st.getPropertyValue('--text-body').trim(),
+      textPrimary:st.getPropertyValue('--text-primary').trim(),
+      accent:     st.getPropertyValue('--accent').trim(),
+      gold:       st.getPropertyValue('--color-gold').trim(),
+      dotFill:    theme === 'light' ? 'rgba(0,0,0,0.06)' : 'rgba(255,255,255,0.07)',
+      tagNodeFill:theme === 'light' ? 'rgba(0,0,0,0.05)' : 'rgba(255,255,255,0.08)',
+    };
 
     const container = svgRef.current.parentElement;
     const W = container.clientWidth  || 900;
@@ -167,7 +184,7 @@ export default function GraphView({ graphData, documents, settings: settingsProp
     const svg = d3.select(svgRef.current)
       .attr('width', W)
       .attr('height', H)
-      .style('background', '#0d1117');
+      .style('background', C.bg);
 
     const defs = svg.append('defs');
 
@@ -180,7 +197,7 @@ export default function GraphView({ graphData, documents, settings: settingsProp
       .attr('patternUnits', 'userSpaceOnUse');
     pat.append('circle')
       .attr('cx', 1).attr('cy', 1).attr('r', 0.8)
-      .attr('fill', 'rgba(255,255,255,0.07)');
+      .attr('fill', C.dotFill);
 
     svg.insert('rect', ':first-child')
       .attr('width', W).attr('height', H)
@@ -227,12 +244,12 @@ export default function GraphView({ graphData, documents, settings: settingsProp
       .style('user-select', 'none');
     fitBtn.append('rect')
       .attr('width', 32).attr('height', 32).attr('rx', 6)
-      .attr('fill', '#161b22').attr('stroke', '#30363d').attr('stroke-width', 1);
+      .attr('fill', C.bgSecondary).attr('stroke', C.border).attr('stroke-width', 1);
     fitBtn.append('text')
       .attr('x', 16).attr('y', 20)
       .attr('text-anchor', 'middle')
       .attr('font-size', '14px')
-      .attr('fill', '#8b949e')
+      .attr('fill', C.textMuted)
       .attr('pointer-events', 'none')
       .text('⊡');
     fitBtn.on('click', () => {
@@ -290,7 +307,7 @@ export default function GraphView({ graphData, documents, settings: settingsProp
       .selectAll('path')
       .data(links)
       .join('path')
-      .attr('stroke', (l) => l.type === 'wiki' ? '#58a6ff' : '#30363d')
+      .attr('stroke', (l) => l.type === 'wiki' ? C.accent : C.border)
       .attr('stroke-opacity', 0.35)
       .attr('stroke-width', settings.linkThickness)
       .attr('stroke-dasharray', (l) => l.type === 'tag' ? '4 3' : null);
@@ -320,16 +337,16 @@ export default function GraphView({ graphData, documents, settings: settingsProp
     nodeEl.append('circle')
       .attr('class', 'node-halo')
       .attr('r', (n) => nodeRadius(n.id) + 4)
-      .attr('fill', (n) => getNodeColor(n, settings.colorBy, moduleColors))
+      .attr('fill', (n) => getNodeColor(n, settings.colorBy, moduleColors, C.tagNodeFill))
       .attr('opacity', 0)
-      .attr('filter', 'url(#node-glow)');
+      .attr('filter', 'url(#node-glow)');;
 
     // Main circle
     nodeEl.append('circle')
       .attr('class', 'node-circle')
       .attr('r', (n) => nodeRadius(n.id))
-      .attr('fill', (n) => n.isTagNode ? 'rgba(255,255,255,0.08)' : getNodeColor(n, settings.colorBy, moduleColors))
-      .attr('stroke', (n) => n.isTagNode ? '#e3b341' : (n.id === localMode?.centerNodeId ? '#ffffff' : '#0d1117'))
+      .attr('fill', (n) => n.isTagNode ? C.tagNodeFill : getNodeColor(n, settings.colorBy, moduleColors))
+      .attr('stroke', (n) => n.isTagNode ? C.gold : (n.id === localMode?.centerNodeId ? C.textPrimary : C.bg))
       .attr('stroke-width', (n) => n.isTagNode ? 1.5 : (n.id === localMode?.centerNodeId ? 2.5 : 1.5))
       .attr('stroke-dasharray', (n) => n.isTagNode ? '3 2' : null)
       .attr('opacity', (n) => matchesSearch(n) ? 1 : 0.12);
@@ -344,7 +361,7 @@ export default function GraphView({ graphData, documents, settings: settingsProp
       .attr('text-anchor', 'middle')
       .attr('font-size', (n) => n.isTagNode ? '8px' : '9px')
       .attr('font-family', 'Inter, system-ui, sans-serif')
-      .attr('fill', (n) => n.isTagNode ? '#e3b341' : '#c9d1d9')
+      .attr('fill', (n) => n.isTagNode ? C.gold : C.textBody)
       .attr('opacity', (n) => n.isTagNode ? 1 : (matchesSearch(n) ? labelOpacityInit : 0))
       .attr('pointer-events', 'none')
       .text((n) => {
@@ -359,7 +376,7 @@ export default function GraphView({ graphData, documents, settings: settingsProp
     if (query) {
       nodeEl.filter((n) => matchesSearch(n) && !n.isTagNode)
         .select('.node-circle')
-        .attr('stroke', '#e3b341')
+        .attr('stroke', C.gold)
         .attr('stroke-width', 2);
       nodeEl.filter((n) => matchesSearch(n))
         .select('.node-label')
@@ -377,9 +394,9 @@ export default function GraphView({ graphData, documents, settings: settingsProp
           return n.id === localMode?.centerNodeId ? 2.5 : 1.5;
         })
         .attr('stroke', (n) => {
-          if (n.isTagNode) return '#e3b341';
-          if (query && matchesSearch(n)) return '#e3b341';
-          return n.id === localMode?.centerNodeId ? '#ffffff' : '#0d1117';
+          if (n.isTagNode) return C.gold;
+          if (query && matchesSearch(n)) return C.gold;
+          return n.id === localMode?.centerNodeId ? C.textPrimary : C.bg;
         });
       nodeEl.select('.node-label').attr('opacity', (n) => {
         if (n.isTagNode) return 1;
@@ -387,7 +404,7 @@ export default function GraphView({ graphData, documents, settings: settingsProp
         return matchesSearch(n) ? (settings.showLabels === 'always' ? 1 : 0) : 0;
       });
       linkEl
-        .attr('stroke', (l) => l.type === 'wiki' ? '#58a6ff' : '#30363d')
+        .attr('stroke', (l) => l.type === 'wiki' ? C.accent : C.border)
         .attr('stroke-opacity', 0.35)
         .attr('stroke-width', settings.linkThickness);
     }
@@ -411,10 +428,10 @@ export default function GraphView({ graphData, documents, settings: settingsProp
           .attr('opacity', (d) => nb.has(d.id) ? 1 : 0.1);
         nodeEl.select('.node-label')
           .attr('opacity', (d) => nb.has(d.id) ? 1 : 0.03)
-          .attr('fill', (d) => d.id === n.id ? '#ffffff' : '#c9d1d9');
+          .attr('fill', (d) => d.id === n.id ? C.textPrimary : C.textBody);
 
         linkEl
-          .attr('stroke', (l) => connLinks.has(l) ? getNodeColor(n, settings.colorBy, moduleColors) : '#30363d')
+          .attr('stroke', (l) => connLinks.has(l) ? getNodeColor(n, settings.colorBy, moduleColors, C.tagNodeFill) : C.border)
           .attr('stroke-opacity', (l) => connLinks.has(l) ? 0.85 : 0.05)
           .attr('stroke-width', (l) => connLinks.has(l) ? Math.max(settings.linkThickness, 2) : settings.linkThickness);
       })
@@ -446,6 +463,7 @@ export default function GraphView({ graphData, documents, settings: settingsProp
     JSON.stringify(settings),
     JSON.stringify(localMode),
     navigate,
+    theme,
   ]);
 
   useEffect(() => {

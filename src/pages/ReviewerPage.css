@@ -7,14 +7,14 @@
   align-items: center;
   justify-content: center;
   gap: 1rem;
-  color: #8b949e;
+  color: var(--text-secondary);
 }
 
 .rv-spinner {
   width: 28px;
   height: 28px;
-  border: 3px solid #30363d;
-  border-top-color: #58a6ff;
+  border: 3px solid var(--border-color);
+  border-top-color: var(--accent);
   border-radius: 50%;
   animation: rv-spin 0.75s linear infinite;
 }
@@ -29,15 +29,15 @@
   min-height: 0;
   overflow-y: auto;
   padding: 2rem 2.5rem;
-  color: #e6edf3;
+  color: var(--text-primary);
 }
 
 .rv-toc-workspace {
   font-size: 0.75rem;
   font-weight: 500;
-  color: #484f58;
-  background: #161b22;
-  border: 1px solid #30363d;
+  color: var(--text-muted);
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
   border-radius: 20px;
   display: inline-block;
   padding: 0.2rem 0.65rem;
@@ -53,10 +53,10 @@
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.06em;
-  color: #8b949e;
+  color: var(--text-secondary);
   margin: 0 0 0.5rem;
   padding-bottom: 0.4rem;
-  border-bottom: 1px solid #21262d;
+  border-bottom: 1px solid var(--border-subtle);
 }
 
 .rv-toc-files {
@@ -66,7 +66,7 @@
 }
 
 .rv-toc-files li {
-  border-bottom: 1px solid #161b22;
+  border-bottom: 1px solid var(--bg-secondary);
 }
 
 .rv-toc-files li:last-child {
@@ -81,7 +81,7 @@
   border: none;
   padding: 0.5rem 0.25rem;
   font-size: 0.9375rem;
-  color: #e6edf3;
+  color: var(--text-primary);
   cursor: pointer;
   border-radius: 4px;
   transition: color 0.12s, background 0.12s;
@@ -89,8 +89,8 @@
 }
 
 .rv-toc-file-link:hover {
-  color: #58a6ff;
-  background: #161b22;
+  color: var(--accent);
+  background: var(--bg-secondary);
   padding-left: 0.5rem;
 }
 
@@ -101,7 +101,7 @@
   align-items: center;
   justify-content: center;
   padding: 3rem;
-  color: #e6edf3;
+  color: var(--text-primary);
 }
 
 .rv-welcome-inner {
@@ -118,13 +118,13 @@
 .rv-welcome-heading {
   font-size: 1.375rem;
   font-weight: 700;
-  color: #e6edf3;
+  color: var(--text-primary);
   margin: 0 0 0.625rem;
 }
 
 .rv-welcome-text {
   font-size: 0.9375rem;
-  color: #8b949e;
+  color: var(--text-secondary);
   margin: 0 0 1.25rem;
   line-height: 1.6;
 }
@@ -133,9 +133,9 @@
   display: inline-block;
   font-size: 0.8rem;
   font-weight: 500;
-  color: #484f58;
-  background: #161b22;
-  border: 1px solid #30363d;
+  color: var(--text-muted);
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
   border-radius: 20px;
   padding: 0.25rem 0.75rem;
 }

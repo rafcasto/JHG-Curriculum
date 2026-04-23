@@ -1,7 +1,7 @@
 .navbar {
   height: 52px;
-  background: #161b22;
-  border-bottom: 1px solid #30363d;
+  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border-color);
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -13,7 +13,7 @@
 .navbar-brand {
   background: none;
   border: none;
-  color: #e6edf3;
+  color: var(--text-primary);
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -25,12 +25,12 @@
 }
 
 .navbar-brand:hover {
-  color: #58a6ff;
+  color: var(--accent);
 }
 
 .navbar-icon {
   font-size: 1.25rem;
-  color: #58a6ff;
+  color: var(--accent);
 }
 
 .navbar-right {
@@ -42,7 +42,7 @@
 .role-badge {
   background: rgba(63, 185, 80, 0.15);
   border: 1px solid rgba(63, 185, 80, 0.4);
-  color: #3fb950;
+  color: var(--color-success);
   border-radius: 12px;
   padding: 0.2rem 0.6rem;
   font-size: 0.75rem;
@@ -50,14 +50,14 @@
 }
 
 .navbar-email {
-  color: #8b949e;
+  color: var(--text-secondary);
   font-size: 0.875rem;
 }
 
 .signout-btn {
   background: none;
-  border: 1px solid #30363d;
-  color: #8b949e;
+  border: 1px solid var(--border-color);
+  color: var(--text-secondary);
   border-radius: 6px;
   cursor: pointer;
   font-size: 0.8125rem;
@@ -66,15 +66,15 @@
 }
 
 .signout-btn:hover {
-  border-color: #f85149;
-  color: #f85149;
+  border-color: var(--color-error);
+  color: var(--color-error);
 }
 
 .navbar-users-link {
   background: none;
-  border: 1px solid #30363d;
+  border: 1px solid var(--border-color);
   border-radius: 6px;
-  color: #8b949e;
+  color: var(--text-secondary);
   cursor: pointer;
   font-size: 0.8125rem;
   padding: 0.3rem 0.625rem;
@@ -82,20 +82,20 @@
 }
 
 .navbar-users-link:hover {
-  border-color: #58a6ff;
-  color: #58a6ff;
+  border-color: var(--accent);
+  color: var(--accent);
 }
 
 .role-badge--editor {
   background: rgba(210, 153, 34, 0.15);
   border: 1px solid rgba(210, 153, 34, 0.4);
-  color: #e3b341;
+  color: var(--color-gold);
 }
 
 .role-badge--reviewer {
   background: rgba(188, 140, 255, 0.15);
   border: 1px solid rgba(188, 140, 255, 0.4);
-  color: #bc8cff;
+  color: var(--color-purple);
 }
 
 /* ── Workspace brand area ───────────────────────────────────────────────── */
@@ -110,7 +110,7 @@
 .workspace-switcher-btn {
   background: none;
   border: none;
-  color: #e6edf3;
+  color: var(--text-primary);
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -124,8 +124,8 @@
 }
 
 .workspace-switcher-btn:hover {
-  color: #58a6ff;
-  background: rgba(88, 166, 255, 0.08);
+  color: var(--accent);
+  background: var(--accent-subtle);
 }
 
 .workspace-name {
@@ -137,7 +137,7 @@
 
 .workspace-caret {
   font-size: 0.7rem;
-  color: #8b949e;
+  color: var(--text-secondary);
   margin-left: 0.1rem;
 }
 
@@ -146,8 +146,8 @@
   top: calc(100% + 6px);
   left: 0;
   min-width: 200px;
-  background: #161b22;
-  border: 1px solid #30363d;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
   border-radius: 8px;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
   overflow: hidden;
@@ -163,7 +163,7 @@
   padding: 0.55rem 1rem;
   background: none;
   border: none;
-  color: #c9d1d9;
+  color: var(--text-body);
   cursor: pointer;
   font-size: 0.875rem;
   text-align: left;
@@ -171,11 +171,31 @@
 }
 
 .workspace-dropdown-item:hover {
-  background: rgba(88, 166, 255, 0.1);
-  color: #e6edf3;
+  background: var(--accent-subtle);
+  color: var(--text-primary);
 }
 
 .workspace-dropdown-item.active {
-  color: #58a6ff;
+  color: var(--accent);
   font-weight: 600;
+}
+
+/* ── Theme toggle button ──────────────────────────────────────────────────── */
+.theme-toggle-btn {
+  background: none;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 1rem;
+  line-height: 1;
+  padding: 0.25rem 0.4rem;
+  transition: border-color 0.15s, background 0.15s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.theme-toggle-btn:hover {
+  border-color: var(--accent);
+  background: var(--accent-subtle);
 }

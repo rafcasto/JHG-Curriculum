@@ -2,13 +2,13 @@
 .admin-page {
   padding: 2rem 2.5rem;
   max-width: 900px;
-  color: #e6edf3;
+  color: var(--text-primary);
 }
 
 .admin-title {
   font-size: 1.5rem;
   font-weight: 700;
-  color: #e6edf3;
+  color: var(--text-primary);
   margin: 0 0 1.25rem;
 }
 
@@ -16,7 +16,7 @@
 .admin-tabs {
   display: flex;
   gap: 0;
-  border-bottom: 1px solid #21262d;
+  border-bottom: 1px solid var(--border-subtle);
   margin-bottom: 2rem;
 }
 
@@ -24,7 +24,7 @@
   background: none;
   border: none;
   border-bottom: 2px solid transparent;
-  color: #8b949e;
+  color: var(--text-secondary);
   cursor: pointer;
   font-size: 0.875rem;
   font-weight: 500;
@@ -33,12 +33,12 @@
 }
 
 .admin-tab:hover {
-  color: #e6edf3;
+  color: var(--text-primary);
 }
 
 .admin-tab.active {
-  color: #58a6ff;
-  border-bottom-color: #58a6ff;
+  color: var(--accent);
+  border-bottom-color: var(--accent);
 }
 
 /* ── Sections ─────────────────────────────────────────────────────────────── */
@@ -51,10 +51,10 @@
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.06em;
-  color: #8b949e;
+  color: var(--text-secondary);
   margin: 0 0 1rem;
   padding-bottom: 0.5rem;
-  border-bottom: 1px solid #21262d;
+  border-bottom: 1px solid var(--border-subtle);
 }
 
 /* ── Add user form ────────────────────────────────────────────────────────── */
@@ -67,10 +67,10 @@
 
 .admin-input,
 .admin-select {
-  background: #0d1117;
-  border: 1px solid #30363d;
+  background: var(--bg-primary);
+  border: 1px solid var(--border-color);
   border-radius: 6px;
-  color: #e6edf3;
+  color: var(--text-primary);
   font-size: 0.875rem;
   padding: 0.45rem 0.75rem;
   outline: none;
@@ -84,8 +84,8 @@
 
 .admin-input:focus,
 .admin-select:focus {
-  border-color: #58a6ff;
-  box-shadow: 0 0 0 3px rgba(88, 166, 255, 0.15);
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-dim);
 }
 
 .admin-select {
@@ -94,7 +94,7 @@
 }
 
 .admin-form-error {
-  color: #f85149;
+  color: var(--color-error);
   font-size: 0.8125rem;
   margin: 0.5rem 0 0;
 }
@@ -129,12 +129,12 @@
 .admin-btn--danger {
   background: none;
   border-color: #f8514933;
-  color: #f85149;
+  color: var(--color-error);
 }
 
 .admin-btn--danger:hover:not(:disabled) {
   background: rgba(248, 81, 73, 0.1);
-  border-color: #f85149;
+  border-color: var(--color-error);
 }
 
 /* ── Error / loading ──────────────────────────────────────────────────────── */
@@ -142,16 +142,16 @@
   display: flex;
   align-items: center;
   gap: 0.75rem;
-  color: #f85149;
+  color: var(--color-error);
   font-size: 0.875rem;
   margin-bottom: 1rem;
 }
 
 .admin-retry-btn {
   background: none;
-  border: 1px solid #30363d;
+  border: 1px solid var(--border-color);
   border-radius: 6px;
-  color: #8b949e;
+  color: var(--text-secondary);
   font-size: 0.8125rem;
   padding: 0.2rem 0.625rem;
   cursor: pointer;
@@ -176,18 +176,18 @@
   font-weight: 600;
   letter-spacing: 0.04em;
   text-transform: uppercase;
-  color: #8b949e;
+  color: var(--text-secondary);
   padding: 0.5rem 0.875rem;
-  border-bottom: 1px solid #21262d;
+  border-bottom: 1px solid var(--border-subtle);
 }
 
 .admin-table tbody tr {
-  border-bottom: 1px solid #161b22;
+  border-bottom: 1px solid var(--bg-secondary);
   transition: background 0.1s;
 }
 
 .admin-table tbody tr:hover {
-  background: #161b22;
+  background: var(--bg-secondary);
 }
 
 .admin-table-row--self {
@@ -197,7 +197,7 @@
 .admin-table tbody td {
   padding: 0.625rem 0.875rem;
   vertical-align: middle;
-  color: #c9d1d9;
+  color: var(--text-body);
 }
 
 .admin-td-email {
@@ -209,10 +209,10 @@
 }
 
 .admin-self-badge {
-  background: rgba(88, 166, 255, 0.15);
+  background: var(--accent-subtle);
   border: 1px solid rgba(88, 166, 255, 0.3);
   border-radius: 10px;
-  color: #58a6ff;
+  color: var(--accent);
   font-family: inherit;
   font-size: 0.7rem;
   font-weight: 600;
@@ -225,13 +225,13 @@
 }
 
 .admin-td-date {
-  color: #8b949e;
+  color: var(--text-secondary);
   font-size: 0.8125rem;
   white-space: nowrap;
 }
 
 .admin-empty {
-  color: #8b949e;
+  color: var(--text-secondary);
   text-align: center;
   padding: 2rem;
 }
@@ -240,8 +240,8 @@
 .spinner {
   width: 28px;
   height: 28px;
-  border: 2px solid #21262d;
-  border-top-color: #58a6ff;
+  border: 2px solid var(--bg-tertiary);
+  border-top-color: var(--accent);
   border-radius: 50%;
   animation: spin 0.65s linear infinite;
 }
@@ -253,13 +253,13 @@
 /* ── Workspace section ────────────────────────────────────────────────────── */
 .admin-btn--secondary {
   background: none;
-  border-color: #30363d;
-  color: #8b949e;
+  border-color: var(--border-color);
+  color: var(--text-secondary);
 }
 
 .admin-btn--secondary:hover:not(:disabled) {
-  border-color: #58a6ff;
-  color: #58a6ff;
+  border-color: var(--accent);
+  color: var(--accent);
 }
 
 .admin-btn--sm {
@@ -268,7 +268,7 @@
 }
 
 .admin-empty-msg {
-  color: #8b949e;
+  color: var(--text-secondary);
   font-size: 0.875rem;
   margin: 0.5rem 0 0;
 }
@@ -281,8 +281,8 @@
 }
 
 .ws-card {
-  background: #0d1117;
-  border: 1px solid #21262d;
+  background: var(--bg-primary);
+  border: 1px solid var(--border-subtle);
   border-radius: 8px;
   overflow: hidden;
 }
@@ -305,23 +305,23 @@
 .ws-card-name {
   font-size: 0.9375rem;
   font-weight: 600;
-  color: #e6edf3;
+  color: var(--text-primary);
 }
 
 .ws-card-folder {
   font-size: 0.75rem;
-  color: #8b949e;
+  color: var(--text-secondary);
 }
 
 .ws-card-folder code {
   font-family: 'SF Mono', 'Fira Code', monospace;
   font-size: 0.75rem;
-  color: #58a6ff;
+  color: var(--accent);
 }
 
 .ws-card-count {
   font-size: 0.75rem;
-  color: #8b949e;
+  color: var(--text-secondary);
 }
 
 .ws-card-actions {
@@ -331,13 +331,13 @@
 }
 
 .ws-users-panel {
-  border-top: 1px solid #21262d;
+  border-top: 1px solid var(--border-subtle);
   padding: 0.875rem 1rem;
-  background: #161b22;
+  background: var(--bg-secondary);
 }
 
 .ws-no-users {
-  color: #8b949e;
+  color: var(--text-secondary);
   font-size: 0.8125rem;
   margin: 0 0 0.75rem;
 }
@@ -357,15 +357,15 @@
   justify-content: space-between;
   gap: 0.75rem;
   padding: 0.35rem 0.5rem;
-  background: #0d1117;
-  border: 1px solid #21262d;
+  background: var(--bg-primary);
+  border: 1px solid var(--border-subtle);
   border-radius: 6px;
 }
 
 .ws-user-email {
   font-size: 0.8125rem;
   font-family: 'SF Mono', 'Fira Code', monospace;
-  color: #c9d1d9;
+  color: var(--text-body);
 }
 
 .ws-add-user-row {

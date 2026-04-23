@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { WorkspaceProvider } from './contexts/WorkspaceContext';
+import { ThemeProvider } from './contexts/ThemeContext';
 import ProtectedRoute from './components/ProtectedRoute';
 import AppLayout from './layouts/AppLayout';
 import LoginPage from './pages/LoginPage';
@@ -28,8 +29,9 @@ function ReviewerBlock({ children }) {
 
 function App() {
   return (
-    <AuthProvider>
-      <WorkspaceProvider>
+    <ThemeProvider>
+      <AuthProvider>
+        <WorkspaceProvider>
         <BrowserRouter>
           <Routes>
             <Route path="/login" element={<LoginPage />} />
@@ -58,8 +60,9 @@ function App() {
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </BrowserRouter>
-      </WorkspaceProvider>
-    </AuthProvider>
+        </WorkspaceProvider>
+      </AuthProvider>
+    </ThemeProvider>
   );
 }
 
