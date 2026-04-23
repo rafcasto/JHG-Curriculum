@@ -197,7 +197,41 @@
 }
 
 .rename-row {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
   padding: 0.1875rem 0.4rem 0.1875rem 1.5rem;
+}
+
+.rename-confirm-btn,
+.rename-cancel-btn {
+  flex-shrink: 0;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 0.85rem;
+  padding: 0.2rem 0.35rem;
+  border-radius: 4px;
+  line-height: 1;
+  transition: color 0.15s, background 0.15s;
+}
+
+.rename-confirm-btn {
+  color: var(--accent);
+}
+
+.rename-confirm-btn:hover {
+  background: var(--bg-tertiary);
+  color: var(--accent);
+}
+
+.rename-cancel-btn {
+  color: var(--text-muted);
+}
+
+.rename-cancel-btn:hover {
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
 }
 
 .rename-input {
@@ -208,7 +242,8 @@
   font-size: 0.8125rem;
   padding: 0.25rem 0.5rem;
   outline: none;
-  width: 100%;
+  flex: 1;
+  min-width: 0;
   box-sizing: border-box;
 }
 

@@ -205,7 +205,7 @@ export default function Sidebar({ documents, loading = false, onRefresh }) {
     });
 
     Object.values(groups).forEach((arr) =>
-      arr.sort((a, b) => (a.title ?? '').localeCompare(b.title ?? ''))
+      arr.sort((a, b) => (a.title ?? '').localeCompare(b.title ?? '', undefined, { numeric: true, sensitivity: 'base' }))
     );
 
     return groups;
@@ -276,9 +276,10 @@ export default function Sidebar({ documents, loading = false, onRefresh }) {
                             if (e.key === 'Enter') { e.preventDefault(); confirmRename(doc); }
                             if (e.key === 'Escape') cancelRename();
                           }}
-                          onBlur={() => confirmRename(doc)}
                           autoFocus
                         />
+                        <button className="rename-confirm-btn" onClick={() => confirmRename(doc)} title="Save">✓</button>
+                        <button className="rename-cancel-btn" onClick={cancelRename} title="Cancel">✕</button>
                       </div>
                     ) : (
                       <div className="file-row">
