@@ -298,7 +298,7 @@ function DetailPanel({ documentName, submissions, users, colSpan }) {
  *   users    — [{ uid, email }]       — from AdminPage
  */
 export default function FeedbackDashboard({ getToken, users }) {
-  const { workspaces } = useWorkspace();
+  const { workspaces, currentWorkspace } = useWorkspace();
   const [submissions, setSubmissions] = useState([]);
   const [questions, setQuestions] = useState([]);
   const [docMap, setDocMap] = useState({}); // documentId -> title
@@ -332,20 +332,15 @@ export default function FeedbackDashboard({ getToken, users }) {
         if (!subRes.ok) throw new Error(subData.error ?? 'Failed to load submissions');
         if (!qRes.ok) throw new Error(qData.error ?? 'Failed to load questions');
 
-        // Fetch files from every workspace folder in parallel to build docId → title map
-        const folderIds = workspaces.map((w) => w.driveFolderId).filter(Boolean);
-        const uniqueFolderIds = [...new Set(folderIds)];
-        const filesResults = await Promise.all(
-          uniqueFolderIds.map((fid) =>
-            fetch(`/api/files?folderId=${encodeURIComponent(fid)}`, { headers })
-              .then((r) => r.json())
-              .catch(() => [])
-          )
-        );
+        // Fetch files from the current workspace folder to build docId → title map
         const map = {};
-        for (const files of filesResults) {
-          if (Array.isArray(files)) {
-            files.forEach((f) => { if (f.id) map[f.id] = f.title ?? f.id; });
+        const folderId = currentWorkspace?.driveFolderId;
+        if (folderId) {
+          const filesResult = await fetch(`/api/files?folderId=${encodeURIComponent(folderId)}`, { headers })
+            .then((r) => r.json())
+            .catch(() => []);
+          if (Array.isArray(filesResult)) {
+            filesResult.forEach((f) => { if (f.id) map[f.id] = f.title ?? f.id; });
           }
         }
 
@@ -374,7 +369,7 @@ export default function FeedbackDashboard({ getToken, users }) {
     }
     load();
     return () => { cancelled = true; };
-  }, [getToken, workspaces]);
+  }, [getToken, workspaces, currentWorkspace]);
 
   // Rating-type post questions (toggleable columns)
   const ratingQuestions = useMemo(
@@ -448,7 +443,7 @@ export default function FeedbackDashboard({ getToken, users }) {
   );
 
   // Total column count for colspan in detail rows
-  const totalCols = 5 + activeCols.length; // doc name + count + CQS + delta + warmup + question cols
+  const totalCols = 3 + activeCols.length; // doc name + count + CQS + question cols
 
   if (loading) {
     return (
@@ -509,8 +504,6 @@ export default function FeedbackDashboard({ getToken, users }) {
                 <th>Document</th>
                 <th>Submissions</th>
                 <th>Avg CQS</th>
-                <th>Avg Δ Confidence</th>
-                <th>Avg Pre-survey</th>
                 {activeCols.map((q) => (
                   <th key={q.id} title={q.text}>{q.text.length > 28 ? q.text.slice(0, 26) + '…' : q.text}</th>
                 ))}
@@ -537,12 +530,6 @@ export default function FeedbackDashboard({ getToken, users }) {
                       <td className="fd-num">{row.count}</td>
                       <td className={`fd-score fd-num ${SCORE_CLASS(row.avgCQS)}`}>
                         {row.avgCQS != null ? Math.round(row.avgCQS) : <span className="fd-empty-cell">—</span>}
-                      </td>
-                      <td className={`fd-num ${DELTA_CLASS(row.avgDelta)}`}>
-                        {fmtDelta(row.avgDelta)}
-                      </td>
-                      <td>
-                        <StarRating value={row.avgWarmup} max={5} />
                       </td>
                       {activeCols.map((q) => (
                         <td key={q.id} className="fd-num">
