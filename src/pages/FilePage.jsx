@@ -281,7 +281,9 @@ export default function FilePage() {
               <span className="meta-pill meta-pill--type">{fm.type}</span>
             )}
             {fm.category && (
-              <span className="meta-pill">{fm.category}</span>
+              Array.isArray(fm.category)
+                ? fm.category.map((c) => <span key={c} className="meta-pill">{c}</span>)
+                : <span className="meta-pill">{fm.category}</span>
             )}
             {fm.tags?.map((tag) => (
               <span key={tag} className="meta-pill meta-pill--tag">{tag}</span>
@@ -411,11 +413,11 @@ export default function FilePage() {
                     remarkPlugins={[remarkGfm]}
                     components={headingComponents}
                   >
-                    {content}
+                    {splitFrontmatter(content).body}
                   </ReactMarkdown>
                 </div>
               </div>
-              {!isUnreviewed && <TableOfContents content={content} scrollRef={scrollRef} />}
+              {!isUnreviewed && <TableOfContents content={splitFrontmatter(content).body} scrollRef={scrollRef} />}
             </>
           ) : (
             <RichTextEditor
