@@ -49,7 +49,7 @@ function moduleLabel(key) {
     .join(' ');
 }
 
-export default function Sidebar({ documents, loading = false, onRefresh }) {
+export default function Sidebar({ documents, loading = false, onRefresh, onDocumentRenamed }) {
   const navigate = useNavigate();
   const { id: activeId } = useParams();
   const { role, user } = useAuth();
@@ -181,7 +181,7 @@ export default function Sidebar({ documents, loading = false, onRefresh }) {
     try {
       const token = await user.getIdToken();
       await renameDocument(doc.id, trimmed, token);
-      onRefresh?.();
+      onDocumentRenamed?.(doc.id, trimmed);
     } catch (err) {
       setRenameError({ id: doc.id, message: err.message });
     }

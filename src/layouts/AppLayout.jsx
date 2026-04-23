@@ -22,6 +22,10 @@ export default function AppLayout() {
     fetchAllDocuments(currentWorkspace?.driveFolderId ?? null).then(setDocuments).catch(console.error);
   }, [currentWorkspace, isReviewer]);
 
+  const updateDocumentTitle = useCallback((docId, newTitle) => {
+    setDocuments(prev => prev.map(d => d.id === docId ? { ...d, title: newTitle } : d));
+  }, []);
+
   useEffect(() => {
     if (isReviewer) { setLoading(false); return; }
     setLoading(true);
@@ -112,7 +116,7 @@ export default function AppLayout() {
             loading={reviewLoading}
           />
         ) : (
-          <Sidebar documents={documents} loading={loading} onRefresh={refreshDocuments} />
+          <Sidebar documents={documents} loading={loading} onRefresh={refreshDocuments} onDocumentRenamed={updateDocumentTitle} />
         )}
         <main className="app-main">
           <Outlet context={{ refreshDocuments, onReviewSubmissionUpdated, reviewDocs, reviewLoading }} />
