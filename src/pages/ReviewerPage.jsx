@@ -1,5 +1,9 @@
-import { useMemo } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { useNavigate, useOutletContext } from 'react-router-dom';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
+import { useWorkspace } from '../contexts/WorkspaceContext';
+import { useAuth } from '../contexts/AuthContext';
 import './ReviewerPage.css';
 
 function getFolder(doc) {
@@ -12,6 +16,37 @@ function getFolder(doc) {
 export default function ReviewerPage() {
   const { reviewDocs = [], reviewLoading = false } = useOutletContext() ?? {};
   const navigate = useNavigate();
+  const { currentWorkspace } = useWorkspace();
+  const { user } = useAuth();
+
+  // Instruction file
+  const instructionFileId = currentWorkspace?.instructionFileId ?? null;
+  const [instructionContent, setInstructionContent] = useState(null);
+  const [instructionTitle, setInstructionTitle] = useState('');
+  const [instructionLoading, setInstructionLoading] = useState(false);
+
+  useEffect(() => {
+    if (!instructionFileId || !user) {
+      setInstructionContent(null);
+      return;
+    }
+    let cancelled = false;
+    setInstructionLoading(true);
+    user.getIdToken().then((token) =>
+      fetch(`/api/file?id=${encodeURIComponent(instructionFileId)}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+    ).then((res) => res.ok ? res.json() : null)
+      .then((data) => {
+        if (!cancelled && data) {
+          setInstructionTitle(data.title ?? '');
+          setInstructionContent(data.content ?? '');
+        }
+      })
+      .catch(() => {})
+      .finally(() => { if (!cancelled) setInstructionLoading(false); });
+    return () => { cancelled = true; };
+  }, [instructionFileId, user]);
 
   const grouped = useMemo(() => {
     const map = {};
@@ -31,11 +66,23 @@ export default function ReviewerPage() {
     }));
   }, [reviewDocs]);
 
-  if (reviewLoading) {
+  if (reviewLoading || instructionLoading) {
     return (
       <div className="rv-loading">
         <div className="rv-spinner" />
         <p>Loading documents…</p>
+      </div>
+    );
+  }
+
+  // Show instruction file instead of TOC when set
+  if (instructionFileId && instructionContent !== null) {
+    return (
+      <div className="rv-instruction-page">
+        {instructionTitle && <h1 className="rv-instruction-heading">{instructionTitle}</h1>}
+        <div className="rv-instruction-body">
+          <ReactMarkdown remarkPlugins={[remarkGfm]}>{instructionContent}</ReactMarkdown>
+        </div>
       </div>
     );
   }

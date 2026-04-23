@@ -140,4 +140,108 @@
   padding: 0.25rem 0.75rem;
 }
 
+/* ── Instruction file page ───────────────────────────────────────────────── */
+
+.rv-instruction-page {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 2rem 2.5rem;
+  color: var(--text-primary);
+}
+
+.rv-instruction-heading {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 0 0 1.5rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.rv-instruction-body {
+  max-width: 760px;
+  line-height: 1.7;
+  font-size: 0.9375rem;
+  color: var(--text-primary);
+}
+
+.rv-instruction-body h1,
+.rv-instruction-body h2,
+.rv-instruction-body h3,
+.rv-instruction-body h4 {
+  color: var(--text-primary);
+  margin-top: 1.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.rv-instruction-body p {
+  margin: 0 0 0.875rem;
+}
+
+.rv-instruction-body ul,
+.rv-instruction-body ol {
+  margin: 0 0 0.875rem;
+  padding-left: 1.5rem;
+}
+
+.rv-instruction-body li {
+  margin-bottom: 0.25rem;
+}
+
+.rv-instruction-body code {
+  font-family: monospace;
+  font-size: 0.875em;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 3px;
+  padding: 0.1em 0.35em;
+}
+
+.rv-instruction-body pre {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  padding: 1rem;
+  overflow-x: auto;
+  margin: 0 0 1rem;
+}
+
+.rv-instruction-body pre code {
+  background: none;
+  border: none;
+  padding: 0;
+  font-size: 0.875rem;
+}
+
+.rv-instruction-body blockquote {
+  border-left: 3px solid var(--accent);
+  margin: 0 0 1rem;
+  padding: 0.25rem 0 0.25rem 1rem;
+  color: var(--text-secondary);
+}
+
+.rv-instruction-body a {
+  color: var(--accent);
+  text-decoration: underline;
+}
+
+.rv-instruction-body table {
+  border-collapse: collapse;
+  width: 100%;
+  margin: 0 0 1rem;
+}
+
+.rv-instruction-body th,
+.rv-instruction-body td {
+  border: 1px solid var(--border-color);
+  padding: 0.4rem 0.75rem;
+  text-align: left;
+}
+
+.rv-instruction-body th {
+  background: var(--bg-secondary);
+  font-weight: 600;
+}
+
 

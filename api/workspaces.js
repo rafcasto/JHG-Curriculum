@@ -163,6 +163,9 @@ export default async function handler(req, res) {
         }
         updates.driveFolderId = driveFolderId;
       }
+      if ('instructionFileId' in (req.body ?? {})) {
+        updates.instructionFileId = req.body.instructionFileId ?? null;
+      }
       if (addUser) updates.userIds = FieldValue.arrayUnion(addUser);
       if (removeUser) updates.userIds = FieldValue.arrayRemove(removeUser);
 
