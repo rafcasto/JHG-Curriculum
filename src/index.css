@@ -25,7 +25,9 @@ button {
   font-family: inherit;
 }
 
-input, textarea, select {
+input:not([type="checkbox"]):not([type="radio"]),
+textarea,
+select {
   font-family: inherit;
   -webkit-appearance: none;
   appearance: none;
