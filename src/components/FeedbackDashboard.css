@@ -251,28 +251,36 @@
 /* ── Warmup star rating ───────────────────────────────────────────────────── */
 .fd-stars {
   display: inline-flex;
-  gap: 1px;
+  align-items: center;
+  gap: 2px;
   cursor: default;
 }
 
 .fd-star-wrap {
-  position: relative;
-  display: inline-block;
-  font-size: 0.9rem;
+  font-size: 1rem;
   line-height: 1;
 }
 
-.fd-star-bg {
+.fd-star--full {
+  color: #e3b341;
+}
+
+.fd-star--empty {
   color: var(--bg-tertiary, #30363d);
 }
 
-.fd-star-fill {
-  position: absolute;
-  top: 0;
-  left: 0;
-  overflow: hidden;
-  color: #e3b341;
-  white-space: nowrap;
+.fd-star--half {
+  background: linear-gradient(to right, #e3b341 50%, var(--bg-tertiary, #30363d) 50%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.fd-stars-label {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  margin-left: 0.375rem;
 }
 
 .fd-empty-cell {

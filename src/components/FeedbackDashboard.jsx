@@ -61,21 +61,21 @@ function formatDuration(secs) {
 
 const STORAGE_KEY = 'fd_visible_question_cols';
 
-// ── Star Rating (avg out of 4 for warmup) ─────────────────────────────────
+// ── Star Rating (avg out of 4 for warmup, displayed as /5) ─────────────────
 
-function StarRating({ value, max = 4 }) {
+function StarRating({ value, max = 5 }) {
   if (value == null) return <span className="fd-empty-cell">—</span>;
+  // Scale 1–4 warmup to 0–5 star range, then snap to nearest 0.5
+  const scaled = (value / 4) * 5;
+  const snapped = Math.round(scaled * 2) / 2;
   return (
-    <span className="fd-stars" title={`${Number(value).toFixed(1)} / ${max}`}>
+    <span className="fd-stars" title={`${snapped} / ${max}`}>
       {Array.from({ length: max }, (_, i) => {
-        const fill = Math.min(1, Math.max(0, value - i));
-        return (
-          <span key={i} className="fd-star-wrap">
-            <span className="fd-star-bg">★</span>
-            <span className="fd-star-fill" style={{ width: `${fill * 100}%` }}>★</span>
-          </span>
-        );
+        const diff = snapped - i;
+        const cls = diff >= 1 ? 'fd-star--full' : diff >= 0.5 ? 'fd-star--half' : 'fd-star--empty';
+        return <span key={i} className={`fd-star-wrap ${cls}`}>★</span>;
       })}
+      <span className="fd-stars-label">{snapped}</span>
     </span>
   );
 }
@@ -542,7 +542,7 @@ export default function FeedbackDashboard({ getToken, users }) {
                         {fmtDelta(row.avgDelta)}
                       </td>
                       <td>
-                        <StarRating value={row.avgWarmup} max={4} />
+                        <StarRating value={row.avgWarmup} max={5} />
                       </td>
                       {activeCols.map((q) => (
                         <td key={q.id} className="fd-num">
