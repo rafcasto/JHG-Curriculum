@@ -23,6 +23,7 @@ const CATEGORY_OPTIONS = [
   'Lesson - Video',
   'Homework - Instructions',
   'Homework - Template example',
+  'Homework - AI Prompt',
 ];
 
 function getModule(doc) {
