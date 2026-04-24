@@ -20,6 +20,7 @@ import usersHandler from '../api/users.js';
 import foldersHandler from '../api/folders.js';
 import workspacesHandler from '../api/workspaces.js';
 import documentsHandler from '../api/documents.js';
+import catalogHandler from '../api/catalog.js';
 import submissionsHandler from '../api/submissions.js';
 import questionsHandler from '../api/questions.js';
 import scoresHandler from '../api/scores.js';
@@ -89,6 +90,7 @@ const server = createServer((req, res) => {
   if (pathname === '/api/folders')     return runHandler(foldersHandler,     req, res);
   if (pathname === '/api/workspaces')  return runHandler(workspacesHandler,  req, res);
   if (pathname === '/api/documents')   return runHandler(documentsHandler,   req, res);
+  if (pathname === '/api/catalog')     return runHandler(catalogHandler,     req, res);
   if (pathname === '/api/submissions') return runHandler(submissionsHandler, req, res);
   if (pathname === '/api/questions')   return runHandler(questionsHandler,   req, res);
   if (pathname === '/api/scores')      return runHandler(scoresHandler,      req, res);

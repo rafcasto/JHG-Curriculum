@@ -377,3 +377,176 @@
   align-items: center;
   flex-wrap: wrap;
 }
+
+/* ── Catalog editor ───────────────────────────────────────────────────────── */
+.catalog-card {
+  border: 1px solid var(--border-subtle);
+  border-radius: 8px;
+  overflow: hidden;
+  margin-bottom: 1.25rem;
+}
+
+.catalog-card--global {
+  border-color: rgba(88, 166, 255, 0.3);
+}
+
+.catalog-card-header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  width: 100%;
+  background: none;
+  border: none;
+  padding: 0.75rem 1rem;
+  cursor: pointer;
+  color: var(--text-primary);
+  font-size: 0.875rem;
+  text-align: left;
+  transition: background 0.12s;
+}
+
+.catalog-card-header:hover {
+  background: var(--bg-secondary);
+}
+
+.catalog-card-title {
+  font-weight: 600;
+  color: var(--accent);
+}
+
+.catalog-card-meta {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  margin-left: 0.25rem;
+}
+
+.catalog-chevron {
+  margin-left: auto;
+  font-size: 0.7rem;
+  color: var(--text-secondary);
+}
+
+.catalog-panel {
+  border-top: 1px solid var(--border-subtle);
+  padding: 1rem;
+  background: var(--bg-secondary);
+}
+
+.catalog-columns {
+  display: flex;
+  gap: 1.5rem;
+  flex-wrap: wrap;
+}
+
+.catalog-col {
+  flex: 1;
+  min-width: 220px;
+}
+
+.catalog-col-title {
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-secondary);
+  margin: 0 0 0.5rem;
+}
+
+.catalog-item-list {
+  list-style: none;
+  margin: 0 0 0.625rem;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.catalog-item-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.3rem 0.5rem;
+  background: var(--bg-primary);
+  border: 1px solid var(--border-subtle);
+  border-radius: 5px;
+  font-size: 0.8125rem;
+}
+
+.catalog-item-label {
+  flex: 1;
+  color: var(--text-body);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.catalog-item-value {
+  font-family: 'SF Mono', 'Fira Code', monospace;
+  font-size: 0.75rem;
+  color: var(--accent);
+  background: var(--accent-subtle);
+  border-radius: 3px;
+  padding: 0.1rem 0.35rem;
+  white-space: nowrap;
+}
+
+.catalog-remove-btn {
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+  font-size: 0.75rem;
+  padding: 0.1rem 0.3rem;
+  border-radius: 3px;
+  flex-shrink: 0;
+  transition: color 0.12s, background 0.12s;
+}
+
+.catalog-remove-btn:hover {
+  color: var(--color-error);
+  background: rgba(248, 81, 73, 0.1);
+}
+
+.catalog-empty {
+  color: var(--text-secondary);
+  font-size: 0.8125rem;
+  font-style: italic;
+  padding: 0.25rem 0.5rem;
+}
+
+.catalog-add-row {
+  display: flex;
+  gap: 0.4rem;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.catalog-input-sm {
+  min-width: 100px !important;
+  flex: 1 !important;
+}
+
+.catalog-save-row {
+  margin-top: 0.875rem;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.catalog-inherit-row {
+  margin-bottom: 0.875rem;
+}
+
+.catalog-toggle-label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.875rem;
+  color: var(--text-body);
+  cursor: pointer;
+}
+
+.ws-catalog-panel {
+  border-top: 1px solid var(--border-subtle);
+  padding: 0.875rem 1rem;
+  background: var(--bg-secondary);
+}

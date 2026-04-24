@@ -21,6 +21,162 @@ function WorkspacesSection({ users, getToken }) {
   const [folderLookupLoading, setFolderLookupLoading] = useState(false);
   const [syncingId, setSyncingId] = useState(null); // workspace id being synced
 
+  // ── Global Catalog ─────────────────────────────────────────────────────────
+  const [globalCatalogOpen, setGlobalCatalogOpen] = useState(false);
+  const [globalCatalog, setGlobalCatalog] = useState({ tags: [], assetTypes: [] });
+  const [gcDraft, setGcDraft] = useState({ tags: [], assetTypes: [] });
+  const [gcSaving, setGcSaving] = useState(false);
+  const [gcError, setGcError] = useState(null);
+  const [gcNewTag, setGcNewTag] = useState({ label: '', value: '' });
+  const [gcNewAssetType, setGcNewAssetType] = useState('');
+
+  useEffect(() => {
+    fetch('/api/catalog')
+      .then((r) => r.json())
+      .then((data) => {
+        setGlobalCatalog(data);
+        setGcDraft(data);
+      })
+      .catch(() => {});
+  }, []);
+
+  async function saveGlobalCatalog() {
+    setGcSaving(true);
+    setGcError(null);
+    try {
+      const token = await getToken();
+      const res = await fetch('/api/catalog', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify(gcDraft),
+      });
+      const body = await res.json();
+      if (!res.ok) throw new Error(body.error ?? 'Save failed');
+      setGlobalCatalog(body);
+      setGcDraft(body);
+    } catch (e) {
+      setGcError(e.message);
+    } finally {
+      setGcSaving(false);
+    }
+  }
+
+  function gcAddTag() {
+    if (!gcNewTag.label.trim() || !gcNewTag.value.trim()) return;
+    setGcDraft((d) => ({ ...d, tags: [...d.tags, { label: gcNewTag.label.trim(), value: gcNewTag.value.trim() }] }));
+    setGcNewTag({ label: '', value: '' });
+  }
+
+  function gcRemoveTag(idx) {
+    setGcDraft((d) => ({ ...d, tags: d.tags.filter((_, i) => i !== idx) }));
+  }
+
+  function gcAddAssetType() {
+    if (!gcNewAssetType.trim()) return;
+    setGcDraft((d) => ({ ...d, assetTypes: [...d.assetTypes, gcNewAssetType.trim()] }));
+    setGcNewAssetType('');
+  }
+
+  function gcRemoveAssetType(idx) {
+    setGcDraft((d) => ({ ...d, assetTypes: d.assetTypes.filter((_, i) => i !== idx) }));
+  }
+
+  // ── Per-Workspace Catalog ──────────────────────────────────────────────────
+  const [catalogOpen, setCatalogOpen] = useState({}); // wsId -> boolean
+  const [catalogDraft, setCatalogDraft] = useState({}); // wsId -> { inheritGlobalCatalog, tags, assetTypes }
+  const [catalogSaving, setCatalogSaving] = useState({}); // wsId -> boolean
+  const [catalogError, setCatalogError] = useState({}); // wsId -> string | null
+  const [wsNewTag, setWsNewTag] = useState({}); // wsId -> { label, value }
+  const [wsNewAssetType, setWsNewAssetType] = useState({}); // wsId -> string
+
+  function openWsCatalog(ws) {
+    const isOpen = catalogOpen[ws.id];
+    setCatalogOpen((prev) => ({ ...prev, [ws.id]: !isOpen }));
+    if (!isOpen && !catalogDraft[ws.id]) {
+      setCatalogDraft((prev) => ({
+        ...prev,
+        [ws.id]: {
+          inheritGlobalCatalog: ws.inheritGlobalCatalog !== false,
+          tags: ws.tags ?? [],
+          assetTypes: ws.assetTypes ?? [],
+        },
+      }));
+      setWsNewTag((prev) => ({ ...prev, [ws.id]: { label: '', value: '' } }));
+      setWsNewAssetType((prev) => ({ ...prev, [ws.id]: '' }));
+    }
+  }
+
+  async function saveWsCatalog(wsId) {
+    const draft = catalogDraft[wsId];
+    if (!draft) return;
+    setCatalogSaving((prev) => ({ ...prev, [wsId]: true }));
+    setCatalogError((prev) => ({ ...prev, [wsId]: null }));
+    try {
+      const token = await getToken();
+      const res = await fetch(`/api/workspaces?id=${encodeURIComponent(wsId)}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({
+          inheritGlobalCatalog: draft.inheritGlobalCatalog,
+          tags: draft.tags,
+          assetTypes: draft.assetTypes,
+        }),
+      });
+      const body = await res.json();
+      if (!res.ok) throw new Error(body.error ?? 'Save failed');
+      await refreshWorkspaces();
+      // Sync draft to saved data
+      setCatalogDraft((prev) => ({ ...prev, [wsId]: draft }));
+    } catch (e) {
+      setCatalogError((prev) => ({ ...prev, [wsId]: e.message }));
+    } finally {
+      setCatalogSaving((prev) => ({ ...prev, [wsId]: false }));
+    }
+  }
+
+  function wsAddTag(wsId) {
+    const nt = wsNewTag[wsId] ?? { label: '', value: '' };
+    if (!nt.label.trim() || !nt.value.trim()) return;
+    setCatalogDraft((prev) => ({
+      ...prev,
+      [wsId]: {
+        ...prev[wsId],
+        tags: [...(prev[wsId].tags ?? []), { label: nt.label.trim(), value: nt.value.trim() }],
+      },
+    }));
+    setWsNewTag((prev) => ({ ...prev, [wsId]: { label: '', value: '' } }));
+  }
+
+  function wsRemoveTag(wsId, idx) {
+    setCatalogDraft((prev) => ({
+      ...prev,
+      [wsId]: { ...prev[wsId], tags: (prev[wsId].tags ?? []).filter((_, i) => i !== idx) },
+    }));
+  }
+
+  function wsAddAssetType(wsId) {
+    const val = wsNewAssetType[wsId] ?? '';
+    if (!val.trim()) return;
+    setCatalogDraft((prev) => ({
+      ...prev,
+      [wsId]: {
+        ...prev[wsId],
+        assetTypes: [...(prev[wsId].assetTypes ?? []), val.trim()],
+      },
+    }));
+    setWsNewAssetType((prev) => ({ ...prev, [wsId]: '' }));
+  }
+
+  function wsRemoveAssetType(wsId, idx) {
+    setCatalogDraft((prev) => ({
+      ...prev,
+      [wsId]: {
+        ...prev[wsId],
+        assetTypes: (prev[wsId].assetTypes ?? []).filter((_, i) => i !== idx),
+      },
+    }));
+  }
+
   // When a folder ID is entered in the create form, auto-fetch its Drive name
   useEffect(() => {
     const id = wsForm.driveFolderId.trim();
@@ -148,6 +304,91 @@ function WorkspacesSection({ users, getToken }) {
     <section className="admin-section">
       <h2 className="admin-section-title">Workspaces</h2>
 
+      {/* ── Global Catalog card ── */}
+      <div className="catalog-card catalog-card--global">
+        <button
+          className="catalog-card-header"
+          onClick={() => setGlobalCatalogOpen((v) => !v)}
+        >
+          <span className="catalog-card-title">Global Catalog</span>
+          <span className="catalog-card-meta">
+            {gcDraft.tags.length} tags · {gcDraft.assetTypes.length} asset types
+          </span>
+          <span className="catalog-chevron">{globalCatalogOpen ? '▲' : '▼'}</span>
+        </button>
+
+        {globalCatalogOpen && (
+          <div className="catalog-panel">
+            <div className="catalog-columns">
+              {/* Tags */}
+              <div className="catalog-col">
+                <h4 className="catalog-col-title">Tags (Steps)</h4>
+                <ul className="catalog-item-list">
+                  {gcDraft.tags.map((t, i) => (
+                    <li key={i} className="catalog-item-row">
+                      <span className="catalog-item-label">{t.label}</span>
+                      <code className="catalog-item-value">{t.value}</code>
+                      <button className="catalog-remove-btn" onClick={() => gcRemoveTag(i)}>✕</button>
+                    </li>
+                  ))}
+                </ul>
+                <div className="catalog-add-row">
+                  <input
+                    className="admin-input catalog-input-sm"
+                    placeholder="Label (e.g. 8. Follow-up)"
+                    value={gcNewTag.label}
+                    onChange={(e) => setGcNewTag((t) => ({ ...t, label: e.target.value }))}
+                    onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), gcAddTag())}
+                  />
+                  <input
+                    className="admin-input catalog-input-sm"
+                    placeholder="Value (e.g. Module/8-Followup)"
+                    value={gcNewTag.value}
+                    onChange={(e) => setGcNewTag((t) => ({ ...t, value: e.target.value }))}
+                    onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), gcAddTag())}
+                  />
+                  <button className="admin-btn admin-btn--secondary admin-btn--sm" onClick={gcAddTag}>Add</button>
+                </div>
+              </div>
+
+              {/* Asset Types */}
+              <div className="catalog-col">
+                <h4 className="catalog-col-title">Asset Types</h4>
+                <ul className="catalog-item-list">
+                  {gcDraft.assetTypes.map((t, i) => (
+                    <li key={i} className="catalog-item-row">
+                      <span className="catalog-item-label">{t}</span>
+                      <button className="catalog-remove-btn" onClick={() => gcRemoveAssetType(i)}>✕</button>
+                    </li>
+                  ))}
+                </ul>
+                <div className="catalog-add-row">
+                  <input
+                    className="admin-input catalog-input-sm"
+                    placeholder="e.g. Lesson - Case Study"
+                    value={gcNewAssetType}
+                    onChange={(e) => setGcNewAssetType(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), gcAddAssetType())}
+                  />
+                  <button className="admin-btn admin-btn--secondary admin-btn--sm" onClick={gcAddAssetType}>Add</button>
+                </div>
+              </div>
+            </div>
+
+            {gcError && <p className="admin-form-error" style={{ marginTop: '0.5rem' }}>{gcError}</p>}
+            <div className="catalog-save-row">
+              <button
+                className="admin-btn admin-btn--primary"
+                onClick={saveGlobalCatalog}
+                disabled={gcSaving}
+              >
+                {gcSaving ? 'Saving…' : 'Save Global Catalog'}
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+
       {/* Create workspace form */}
       <form className="admin-form" onSubmit={handleCreateWorkspace}>
         <div className="admin-form-row">
@@ -240,6 +481,12 @@ function WorkspacesSection({ users, getToken }) {
                       {isOpen ? 'Hide Users' : 'Manage Users'}
                     </button>
                     <button
+                      className="admin-btn admin-btn--secondary"
+                      onClick={() => openWsCatalog(ws)}
+                    >
+                      {catalogOpen[ws.id] ? 'Hide Catalog' : 'Catalog'}
+                    </button>
+                    <button
                       className="admin-btn admin-btn--danger"
                       onClick={() => handleDeleteWorkspace(ws.id, ws.name)}
                     >
@@ -293,6 +540,127 @@ function WorkspacesSection({ users, getToken }) {
                         </button>
                       </div>
                     )}
+                  </div>
+                )}
+
+                {/* ── Per-workspace Custom Catalog panel ── */}
+                {catalogOpen[ws.id] && (
+                  <div className="ws-catalog-panel">
+                    <div className="catalog-inherit-row">
+                      <label className="catalog-toggle-label">
+                        <input
+                          type="checkbox"
+                          checked={catalogDraft[ws.id]?.inheritGlobalCatalog ?? true}
+                          onChange={(e) =>
+                            setCatalogDraft((prev) => ({
+                              ...prev,
+                              [ws.id]: { ...prev[ws.id], inheritGlobalCatalog: e.target.checked },
+                            }))
+                          }
+                        />
+                        Inherit global catalog (merge workspace additions with global defaults)
+                      </label>
+                    </div>
+                    <div className="catalog-columns">
+                      {/* Custom Tags */}
+                      <div className="catalog-col">
+                        <h4 className="catalog-col-title">Custom Tags</h4>
+                        <ul className="catalog-item-list">
+                          {(catalogDraft[ws.id]?.tags ?? []).map((t, i) => (
+                            <li key={i} className="catalog-item-row">
+                              <span className="catalog-item-label">{t.label}</span>
+                              <code className="catalog-item-value">{t.value}</code>
+                              <button
+                                className="catalog-remove-btn"
+                                onClick={() => wsRemoveTag(ws.id, i)}
+                              >✕</button>
+                            </li>
+                          ))}
+                          {(catalogDraft[ws.id]?.tags ?? []).length === 0 && (
+                            <li className="catalog-empty">No custom tags yet</li>
+                          )}
+                        </ul>
+                        <div className="catalog-add-row">
+                          <input
+                            className="admin-input catalog-input-sm"
+                            placeholder="Label"
+                            value={wsNewTag[ws.id]?.label ?? ''}
+                            onChange={(e) =>
+                              setWsNewTag((prev) => ({
+                                ...prev,
+                                [ws.id]: { ...(prev[ws.id] ?? { label: '', value: '' }), label: e.target.value },
+                              }))
+                            }
+                            onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), wsAddTag(ws.id))}
+                          />
+                          <input
+                            className="admin-input catalog-input-sm"
+                            placeholder="Value"
+                            value={wsNewTag[ws.id]?.value ?? ''}
+                            onChange={(e) =>
+                              setWsNewTag((prev) => ({
+                                ...prev,
+                                [ws.id]: { ...(prev[ws.id] ?? { label: '', value: '' }), value: e.target.value },
+                              }))
+                            }
+                            onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), wsAddTag(ws.id))}
+                          />
+                          <button
+                            className="admin-btn admin-btn--secondary admin-btn--sm"
+                            onClick={() => wsAddTag(ws.id)}
+                          >Add</button>
+                        </div>
+                      </div>
+
+                      {/* Custom Asset Types */}
+                      <div className="catalog-col">
+                        <h4 className="catalog-col-title">Custom Asset Types</h4>
+                        <ul className="catalog-item-list">
+                          {(catalogDraft[ws.id]?.assetTypes ?? []).map((t, i) => (
+                            <li key={i} className="catalog-item-row">
+                              <span className="catalog-item-label">{t}</span>
+                              <button
+                                className="catalog-remove-btn"
+                                onClick={() => wsRemoveAssetType(ws.id, i)}
+                              >✕</button>
+                            </li>
+                          ))}
+                          {(catalogDraft[ws.id]?.assetTypes ?? []).length === 0 && (
+                            <li className="catalog-empty">No custom asset types yet</li>
+                          )}
+                        </ul>
+                        <div className="catalog-add-row">
+                          <input
+                            className="admin-input catalog-input-sm"
+                            placeholder="e.g. Workshop"
+                            value={wsNewAssetType[ws.id] ?? ''}
+                            onChange={(e) =>
+                              setWsNewAssetType((prev) => ({ ...prev, [ws.id]: e.target.value }))
+                            }
+                            onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), wsAddAssetType(ws.id))}
+                          />
+                          <button
+                            className="admin-btn admin-btn--secondary admin-btn--sm"
+                            onClick={() => wsAddAssetType(ws.id)}
+                          >Add</button>
+                        </div>
+                      </div>
+                    </div>
+
+                    {catalogError[ws.id] && (
+                      <p className="admin-form-error" style={{ marginTop: '0.5rem' }}>
+                        {catalogError[ws.id]}
+                      </p>
+                    )}
+                    <div className="catalog-save-row">
+                      <button
+                        className="admin-btn admin-btn--primary"
+                        onClick={() => saveWsCatalog(ws.id)}
+                        disabled={catalogSaving[ws.id]}
+                      >
+                        {catalogSaving[ws.id] ? 'Saving…' : 'Save Catalog'}
+                      </button>
+                    </div>
                   </div>
                 )}
               </div>

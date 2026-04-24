@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState, useCallback } from 'react';
+import { createContext, useContext, useEffect, useState, useCallback, useMemo } from 'react';
 import { useAuth } from './AuthContext';
 
 const WorkspaceContext = createContext(null);
@@ -9,6 +9,44 @@ export function WorkspaceProvider({ children }) {
   const [currentWorkspace, setCurrentWorkspaceState] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [globalCatalog, setGlobalCatalog] = useState({ tags: [], assetTypes: [] });
+
+  // Fetch global catalog once on mount (no auth required)
+  useEffect(() => {
+    fetch('/api/catalog')
+      .then((r) => r.json())
+      .then((data) => {
+        setGlobalCatalog({
+          tags: data.tags ?? [],
+          assetTypes: data.assetTypes ?? [],
+        });
+      })
+      .catch(() => {});
+  }, []);
+
+  // Computed active tags for the current workspace:
+  //   inheritGlobalCatalog !== false → deduped union of global + workspace tags
+  //   inheritGlobalCatalog === false → workspace-only tags
+  //   no workspace selected         → global only
+  const activeTags = useMemo(() => {
+    const wsTags = currentWorkspace?.tags ?? [];
+    const inherit = currentWorkspace?.inheritGlobalCatalog !== false;
+    if (!currentWorkspace || inherit) {
+      const map = new Map();
+      [...globalCatalog.tags, ...wsTags].forEach((t) => map.set(t.value, t));
+      return [...map.values()];
+    }
+    return wsTags;
+  }, [currentWorkspace, globalCatalog.tags]);
+
+  const activeAssetTypes = useMemo(() => {
+    const wsTypes = currentWorkspace?.assetTypes ?? [];
+    const inherit = currentWorkspace?.inheritGlobalCatalog !== false;
+    if (!currentWorkspace || inherit) {
+      return [...new Set([...globalCatalog.assetTypes, ...wsTypes])];
+    }
+    return wsTypes;
+  }, [currentWorkspace, globalCatalog.assetTypes]);
 
   const fetchWorkspaces = useCallback(async () => {
     if (!user) {
@@ -62,6 +100,9 @@ export function WorkspaceProvider({ children }) {
         loading,
         error,
         refreshWorkspaces: fetchWorkspaces,
+        globalCatalog,
+        activeTags,
+        activeAssetTypes,
       }}
     >
       {children}

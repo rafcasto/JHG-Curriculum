@@ -1,18 +1,7 @@
 import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useWorkspace } from '../contexts/WorkspaceContext';
 import './TableView.css';
-
-const ASSET_FILTER_OPTIONS = [
-  { label: 'All Asset Types', value: '' },
-  { label: 'Infographic', value: 'Infographic' },
-  { label: 'Lesson - Text', value: 'Lesson - Text' },
-  { label: 'Lesson - Example', value: 'Lesson - Example' },
-  { label: 'Lesson - Video', value: 'Lesson - Video' },
-  { label: 'Homework - Instructions', value: 'Homework - Instructions' },
-  { label: 'Homework - Template', value: 'Homework - Template' },
-  { label: 'Homework - Example', value: 'Homework - Example' },
-  { label: 'Homework - AI Prompt', value: 'Homework - AI Prompt' },
-];
 
 function normalizeCategory(cat) {
   if (!cat) return '';
@@ -30,8 +19,14 @@ function normalizeCategory(cat) {
 
 export default function TableView({ nodes }) {
   const navigate = useNavigate();
+  const { activeAssetTypes } = useWorkspace();
   const [stepFilter, setStepFilter] = useState('');
   const [assetFilter, setAssetFilter] = useState('');
+
+  const assetFilterOptions = useMemo(
+    () => [{ label: 'All Asset Types', value: '' }, ...activeAssetTypes.map((t) => ({ label: t, value: t }))],
+    [activeAssetTypes]
+  );
 
   // Derive unique step values from actual document tags
   const stepOptions = useMemo(() => {
@@ -65,7 +60,7 @@ export default function TableView({ nodes }) {
           ))}
         </select>
         <select value={assetFilter} onChange={(e) => setAssetFilter(e.target.value)}>
-          {ASSET_FILTER_OPTIONS.map((o) => (
+          {assetFilterOptions.map((o) => (
             <option key={o.value} value={o.value}>{o.label}</option>
           ))}
         </select>

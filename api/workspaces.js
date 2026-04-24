@@ -166,6 +166,21 @@ export default async function handler(req, res) {
       if ('instructionFileId' in (req.body ?? {})) {
         updates.instructionFileId = req.body.instructionFileId ?? null;
       }
+      if ('inheritGlobalCatalog' in (req.body ?? {})) {
+        updates.inheritGlobalCatalog = req.body.inheritGlobalCatalog !== false;
+      }
+      if ('tags' in (req.body ?? {})) {
+        if (!Array.isArray(req.body.tags)) {
+          return res.status(400).json({ error: 'tags must be an array' });
+        }
+        updates.tags = req.body.tags;
+      }
+      if ('assetTypes' in (req.body ?? {})) {
+        if (!Array.isArray(req.body.assetTypes)) {
+          return res.status(400).json({ error: 'assetTypes must be an array' });
+        }
+        updates.assetTypes = req.body.assetTypes;
+      }
       if (addUser) updates.userIds = FieldValue.arrayUnion(addUser);
       if (removeUser) updates.userIds = FieldValue.arrayRemove(removeUser);
 

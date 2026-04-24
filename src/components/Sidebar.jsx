@@ -5,28 +5,6 @@ import { useWorkspace } from '../contexts/WorkspaceContext';
 import { createDocument, renameDocument } from '../hooks/useDocuments';
 import './Sidebar.css';
 
-const TAG_OPTIONS = [
-  { label: '0. Preparation',        value: 'Module/0-Preparation' },
-  { label: '1. Goal',               value: 'Module/1-Goal' },
-  { label: '2. Value - Resume',     value: 'Module/2-Value-Resume' },
-  { label: '3. Value - eProfile',   value: 'Module/3-Value-eProfile' },
-  { label: '4. Apply on autopilot', value: 'Module/4-Apply-on-autopilot' },
-  { label: '5. Networking',         value: 'Module/5-Networking' },
-  { label: '6. Interview',          value: 'Module/6-Interview' },
-  { label: '7. Nego',               value: 'Module/7-Nego' },
-];
-
-const CATEGORY_OPTIONS = [
-  'Infographic',
-  'Lesson - Text',
-  'Lesson - Example',
-  'Lesson - Video',
-  'Homework - Instructions',
-  'Homework - Template',
-  'Homework - Example',
-  'Homework - AI Prompt',
-];
-
 function getModule(doc) {
   const p = doc.path ?? '';
   if (!p.includes('/')) return 'other';
@@ -76,7 +54,7 @@ export default function Sidebar({ documents, loading = false, onRefresh, onDocum
   const [renameError, setRenameError] = useState(null); // { id, message }
 
   const canEdit = role === 'admin' || role === 'editor';
-  const { currentWorkspace } = useWorkspace();
+  const { currentWorkspace, activeTags, activeAssetTypes } = useWorkspace();
   const workspaceFolderId = currentWorkspace?.driveFolderId ?? null;
 
   /** Build the /api/folders URL, optionally scoped to the current workspace root. */
@@ -357,7 +335,7 @@ export default function Sidebar({ documents, loading = false, onRefresh, onDocum
                 Step <span className="modal-required">*</span>
               </label>
               <div className="modal-radio-group">
-                {TAG_OPTIONS.map((opt) => (
+                {activeTags.map((opt) => (
                   <label key={opt.value} className="modal-radio-label">
                     <input
                       type="radio"
@@ -373,7 +351,7 @@ export default function Sidebar({ documents, loading = false, onRefresh, onDocum
 
               <label className="modal-label">Asset Type</label>
               <div className="modal-checkbox-group">
-                {CATEGORY_OPTIONS.map((cat) => (
+                {activeAssetTypes.map((cat) => (
                   <label key={cat} className="modal-checkbox-label">
                     <input
                       type="checkbox"
