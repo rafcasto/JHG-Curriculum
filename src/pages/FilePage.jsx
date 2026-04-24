@@ -152,9 +152,14 @@ export default function FilePage() {
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState(null);
+  const [saveError, setSaveError] = useState(null);
   const [mode, setMode] = useState('preview'); // 'preview' | 'edit'
   const [saved, setSaved] = useState(false);
   const [dirty, setDirty] = useState(false);
+
+  // Keep a ref to always have the latest content in save callbacks
+  const contentRef = useRef('');
+  useEffect(() => { contentRef.current = content; }, [content]);
   const readOnly = doc?.readOnly ?? false;
   const canEdit = role === 'admin' || role === 'editor';
 
@@ -252,19 +257,22 @@ export default function FilePage() {
   const handleSave = useCallback(async () => {
     if (!doc || saving) return;
     setSaving(true);
+    setSaveError(null);
     try {
+      const latestContent = contentRef.current;
       const token = await user.getIdToken();
-      await saveDocument(id, content, token);
-      setDoc((prev) => ({ ...prev, content }));
+      await saveDocument(id, latestContent, token);
+      setDoc((prev) => ({ ...prev, content: latestContent }));
       setDirty(false);
       setSaved(true);
       setTimeout(() => setSaved(false), 2500);
     } catch (e) {
-      setError('Save failed: ' + e.message);
+      setSaveError(e.message);
+      setTimeout(() => setSaveError(null), 4000);
     } finally {
       setSaving(false);
     }
-  }, [doc, saving, id, content, user]);
+  }, [doc, saving, id, user]);
 
   const handleDelete = useCallback(async () => {
     if (!doc || deleting) return;
@@ -420,14 +428,21 @@ export default function FilePage() {
               </button>
             </div>
             {mode === 'edit' && (
-              <button
-                className={`save-btn${saved ? ' saved' : ''}`}
-                onClick={handleSave}
-                disabled={saving || !dirty}
-                title="Save (⌘S)"
-              >
-                {saving ? 'Saving…' : saved ? '✓ Saved' : 'Save'}
-              </button>
+              <>
+                <button
+                  className={`save-btn${saved ? ' saved' : ''}`}
+                  onClick={handleSave}
+                  disabled={saving || !dirty}
+                  title="Save (⌘S)"
+                >
+                  {saving ? 'Saving…' : saved ? '✓ Saved' : 'Save'}
+                </button>
+                {saveError && (
+                  <span className="save-error-msg" title={saveError}>
+                    ✕ {saveError}
+                  </span>
+                )}
+              </>
             )}
             <button
               className="delete-btn"

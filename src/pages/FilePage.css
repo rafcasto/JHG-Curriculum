@@ -146,6 +146,17 @@
   background: var(--color-success);
 }
 
+/* Inline save-failure message shown next to the Save button */
+.save-error-msg {
+  color: var(--color-error, #f85149);
+  font-size: 0.78rem;
+  font-weight: 500;
+  white-space: nowrap;
+  max-width: 220px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 /* ── Delete button ────────────────────────────────────────────────────────── */
 .delete-btn {
   background: none;

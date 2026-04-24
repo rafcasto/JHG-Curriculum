@@ -1,3 +1,4 @@
+import { useEffect, useRef } from 'react';
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Underline from '@tiptap/extension-underline';
@@ -28,6 +29,10 @@ function ToolbarBtn({ onClick, active, title, children }) {
  *   onChange(markdown) — called on every content change with the serialised markdown string
  */
 export default function RichTextEditor({ initialContent = '', onChange }) {
+  // Suppress the onUpdate that fires when setContent is called on mount,
+  // so the file isn't immediately marked dirty before the user edits anything.
+  const isInitialLoad = useRef(true);
+
   const editor = useEditor({
     extensions: [
       StarterKit,
@@ -40,11 +45,23 @@ export default function RichTextEditor({ initialContent = '', onChange }) {
       TableHeader,
       Markdown.configure({ html: false, transformCopiedText: true }),
     ],
-    content: initialContent,
+    content: '',
     onUpdate: ({ editor: ed }) => {
+      if (isInitialLoad.current) { isInitialLoad.current = false; return; }
       onChange?.(ed.storage.markdown.getMarkdown());
     },
   });
+
+  // Populate content once after the editor mounts. Using setContent here (which
+  // is overridden by tiptap-markdown to parse markdown) avoids passing
+  // initialContent as a reactive option — that caused TipTap v3 to call
+  // setOptions() on every keystroke as the prop changed with each edit.
+  useEffect(() => {
+    if (!editor) return;
+    isInitialLoad.current = true;
+    editor.commands.setContent(initialContent);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [editor]);
 
   function addLink() {
     const prev = editor.getAttributes('link').href ?? '';
