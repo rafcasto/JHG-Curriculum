@@ -413,6 +413,160 @@
   border-radius: 6px;
 }
 
+/* ── Collapsible headings ─────────────────────────────────────────────────── */
+.markdown-body details {
+  margin-top: 2em;
+  margin-bottom: 0;
+}
+
+/* Suppress default browser triangle — we draw our own */
+.markdown-body details > summary {
+  display: block;
+  list-style: none;
+  cursor: pointer;
+  padding-left: 1.5em;
+  position: relative;
+  user-select: none;
+}
+.markdown-body details > summary::-webkit-details-marker { display: none; }
+
+/* Fold arrow */
+.markdown-body details > summary::before {
+  content: '▶';
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 0.55em;
+  color: var(--text-secondary);
+  opacity: 0.3;
+  transition: transform 0.15s ease, opacity 0.2s;
+  line-height: 1;
+}
+.markdown-body details > summary:hover::before {
+  opacity: 0.8;
+}
+.markdown-body details[open] > summary::before {
+  transform: translateY(-50%) rotate(90deg);
+  opacity: 0.5;
+}
+
+/* Headings inside summary lose their own top margin (details provides it) */
+.markdown-body details > summary > h1,
+.markdown-body details > summary > h2,
+.markdown-body details > summary > h3 {
+  display: block;
+  margin-top: 0;
+  margin-bottom: 0.15em;
+  padding-left: 0;
+}
+
+/* Nested sections get slightly less top space */
+.markdown-body details details {
+  margin-top: 0.75em;
+}
+
+/* ── Code block copy button ───────────────────────────────────────────────── */
+.code-copy-wrapper {
+  position: relative;
+}
+
+/* The <pre> inside the wrapper — no additional margin needed (pre already has it) */
+.code-copy-wrapper pre {
+  margin: 0;
+}
+
+.code-copy-btn {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-color);
+  border-radius: 5px;
+  color: var(--text-secondary);
+  font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
+  font-size: 0.72rem;
+  padding: 0.2rem 0.55rem;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.15s, color 0.15s, background 0.15s;
+  line-height: 1.6;
+}
+.code-copy-wrapper:hover .code-copy-btn {
+  opacity: 1;
+}
+.code-copy-btn:hover {
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+}
+.code-copy-btn.copied {
+  color: var(--color-success, #3fb950);
+  border-color: var(--color-success, #3fb950);
+  opacity: 1;
+}
+
+/* ── Callout blocks ───────────────────────────────────────────────────────── */
+.markdown-body .callout {
+  border-radius: 6px;
+  margin: 1.25rem 0;
+  overflow: hidden;
+  border: 1px solid var(--border-color);
+}
+
+.callout-title {
+  display: flex;
+  align-items: center;
+  gap: 0.5em;
+  padding: 0.55rem 1rem;
+  font-weight: 600;
+  font-size: 0.875rem;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.callout-icon {
+  font-size: 1em;
+  line-height: 1;
+}
+
+.callout-body {
+  padding: 0.75rem 1rem;
+  font-size: 0.9rem;
+}
+.callout-body > *:first-child { margin-top: 0; }
+.callout-body > *:last-child  { margin-bottom: 0; }
+
+/* Per-type accent colors */
+.callout-note    .callout-title,
+.callout-info    .callout-title { background: rgba(56, 139, 253, 0.12); color: #58a6ff; border-bottom-color: rgba(56,139,253,0.2); }
+.callout-note,
+.callout-info                   { border-color: rgba(56, 139, 253, 0.3); }
+
+.callout-tip     .callout-title { background: rgba(63, 185, 80, 0.12); color: #3fb950; border-bottom-color: rgba(63,185,80,0.2); }
+.callout-tip                    { border-color: rgba(63, 185, 80, 0.3); }
+
+.callout-warning .callout-title,
+.callout-caution .callout-title { background: rgba(210, 153, 34, 0.12); color: #d29922; border-bottom-color: rgba(210,153,34,0.2); }
+.callout-warning,
+.callout-caution                { border-color: rgba(210, 153, 34, 0.3); }
+
+.callout-danger  .callout-title { background: rgba(248, 81, 73, 0.12); color: #f85149; border-bottom-color: rgba(248,81,73,0.2); }
+.callout-danger                 { border-color: rgba(248, 81, 73, 0.3); }
+
+.callout-important .callout-title { background: rgba(163, 113, 247, 0.12); color: #a371f7; border-bottom-color: rgba(163,113,247,0.2); }
+.callout-important               { border-color: rgba(163, 113, 247, 0.3); }
+
+.callout-success .callout-title { background: rgba(63, 185, 80, 0.12); color: #3fb950; border-bottom-color: rgba(63,185,80,0.2); }
+.callout-success                { border-color: rgba(63, 185, 80, 0.3); }
+
+/* Light theme callout adjustments */
+[data-theme='light'] .callout-note    .callout-title,
+[data-theme='light'] .callout-info    .callout-title { color: #0969da; background: rgba(9,105,218,0.08); }
+[data-theme='light'] .callout-tip     .callout-title { color: #1a7f37; background: rgba(26,127,55,0.08); }
+[data-theme='light'] .callout-warning .callout-title,
+[data-theme='light'] .callout-caution .callout-title { color: #9a6700; background: rgba(154,103,0,0.08); }
+[data-theme='light'] .callout-danger  .callout-title { color: #cf222e; background: rgba(207,34,46,0.08); }
+[data-theme='light'] .callout-important .callout-title { color: #8250df; background: rgba(130,80,223,0.08); }
+
 /* ── Graph toggle button ──────────────────────────────────────────────────── */
 .graph-toggle-btn {
   padding: 0.3rem 0.75rem;

@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback, useRef } from 'react';
 import { useParams, useNavigate, useOutletContext } from 'react-router-dom';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import rehypeCollapsibleHeadings from '../utils/rehypeCollapsibleHeadings';
 import { useAuth } from '../contexts/AuthContext';
 import { useWorkspace } from '../contexts/WorkspaceContext';
 import { fetchDocument, saveDocument, deleteDocument } from '../hooks/useDocuments';
@@ -32,10 +33,99 @@ function makeHeading(Tag) {
   };
 }
 
+/** Code block wrapper with a copy-to-clipboard button. */
+function PreWithCopy({ node, children, ...props }) {
+  const [copied, setCopied] = useState(false);
+
+  function handleCopy() {
+    // Extract raw text from the HAST node to avoid pulling from highlighted spans
+    let text = '';
+    try {
+      const codeNode = node?.children?.find(
+        (c) => c.type === 'element' && c.tagName === 'code'
+      );
+      text = (codeNode?.children ?? [])
+        .map((c) => (c.type === 'text' ? c.value : (c.children ?? []).map((cc) => cc.value ?? '').join('')))
+        .join('');
+    } catch (_) {
+      // fallback: get text from DOM via the pre element
+    }
+    navigator.clipboard.writeText(text).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    });
+  }
+
+  return (
+    <div className="code-copy-wrapper">
+      <pre {...props}>{children}</pre>
+      <button
+        className={`code-copy-btn${copied ? ' copied' : ''}`}
+        onClick={handleCopy}
+        aria-label="Copy code"
+      >
+        {copied ? 'Copied!' : 'Copy'}
+      </button>
+    </div>
+  );
+}
+
+/** Callout block renderer — detects > [!TYPE] Title syntax. */
+const CALLOUT_TYPES = {
+  note:      { icon: 'ℹ', label: 'Note' },
+  info:      { icon: 'ℹ', label: 'Info' },
+  tip:       { icon: '💡', label: 'Tip' },
+  warning:   { icon: '⚠', label: 'Warning' },
+  caution:   { icon: '⚠', label: 'Caution' },
+  danger:    { icon: '⚡', label: 'Danger' },
+  important: { icon: '📌', label: 'Important' },
+  success:   { icon: '✓', label: 'Success' },
+};
+
+function Callout({ node, children, ...props }) {
+  // Find the first paragraph child in the HAST node
+  const firstP = node?.children?.find(
+    (c) => c.type === 'element' && c.tagName === 'p'
+  );
+  const firstText = firstP?.children?.[0];
+
+  if (firstText?.type === 'text') {
+    const match = firstText.value.match(/^\[!(NOTE|INFO|TIP|WARNING|CAUTION|DANGER|IMPORTANT|SUCCESS)\][ \t]*(.*)/i);
+    if (match) {
+      const type = match[1].toLowerCase();
+      const inlineTitle = match[2].trim();
+      const meta = CALLOUT_TYPES[type] ?? { icon: 'ℹ', label: match[1] };
+      const title = inlineTitle || meta.label;
+
+      // Strip the [!TYPE] marker line from rendered children
+      // children[0] is the first <p>; we replace its text
+      const bodyChildren = children ? [...children] : [];
+
+      return (
+        <div className={`callout callout-${type}`}>
+          <div className="callout-title">
+            <span className="callout-icon" aria-hidden="true">{meta.icon}</span>
+            <span>{title}</span>
+          </div>
+          <div className="callout-body">{bodyChildren}</div>
+        </div>
+      );
+    }
+  }
+
+  return <blockquote {...props}>{children}</blockquote>;
+}
+
 const headingComponents = {
   h1: makeHeading('h1'),
   h2: makeHeading('h2'),
   h3: makeHeading('h3'),
+};
+
+const markdownComponents = {
+  ...headingComponents,
+  pre: PreWithCopy,
+  blockquote: Callout,
 };
 
 /** Split raw file content into the YAML frontmatter block and the markdown body. */
@@ -430,7 +520,8 @@ export default function FilePage() {
                 <div className="markdown-body">
                   <ReactMarkdown
                     remarkPlugins={[remarkGfm]}
-                    components={headingComponents}
+                    rehypePlugins={[rehypeCollapsibleHeadings]}
+                    components={markdownComponents}
                   >
                     {splitFrontmatter(content).body}
                   </ReactMarkdown>

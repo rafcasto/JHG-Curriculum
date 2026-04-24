@@ -19,6 +19,10 @@ import graphHandler from '../api/graph.js';
 import usersHandler from '../api/users.js';
 import foldersHandler from '../api/folders.js';
 import workspacesHandler from '../api/workspaces.js';
+import documentsHandler from '../api/documents.js';
+import submissionsHandler from '../api/submissions.js';
+import questionsHandler from '../api/questions.js';
+import scoresHandler from '../api/scores.js';
 
 const PORT = 3000;
 
@@ -78,12 +82,16 @@ const server = createServer((req, res) => {
     return res.end();
   }
 
-  if (pathname === '/api/files')      return runHandler(filesHandler,      req, res);
-  if (pathname === '/api/file')       return runHandler(fileHandler,       req, res);
-  if (pathname === '/api/graph')      return runHandler(graphHandler,      req, res);
-  if (pathname === '/api/users')      return runHandler(usersHandler,      req, res);
-  if (pathname === '/api/folders')    return runHandler(foldersHandler,    req, res);
-  if (pathname === '/api/workspaces') return runHandler(workspacesHandler, req, res);
+  if (pathname === '/api/files')       return runHandler(filesHandler,       req, res);
+  if (pathname === '/api/file')        return runHandler(fileHandler,        req, res);
+  if (pathname === '/api/graph')       return runHandler(graphHandler,       req, res);
+  if (pathname === '/api/users')       return runHandler(usersHandler,       req, res);
+  if (pathname === '/api/folders')     return runHandler(foldersHandler,     req, res);
+  if (pathname === '/api/workspaces')  return runHandler(workspacesHandler,  req, res);
+  if (pathname === '/api/documents')   return runHandler(documentsHandler,   req, res);
+  if (pathname === '/api/submissions') return runHandler(submissionsHandler, req, res);
+  if (pathname === '/api/questions')   return runHandler(questionsHandler,   req, res);
+  if (pathname === '/api/scores')      return runHandler(scoresHandler,      req, res);
 
   res.writeHead(404, { 'Content-Type': 'application/json' });
   res.end(JSON.stringify({ error: 'Not found' }));
@@ -98,6 +106,10 @@ server.listen(PORT, () => {
   console.log('  POST        /api/file?folderId=<id>');
   console.log('  PUT         /api/file?id=<id>');
   console.log('  PATCH       /api/file?id=<id>      (rename)');
+  console.log('  GET/POST/PATCH/DELETE /api/documents');
+  console.log('  GET/POST/PATCH    /api/submissions');
+  console.log('  GET/POST/PATCH/DELETE /api/questions');
+  console.log('  GET         /api/scores');
   console.log('  DELETE      /api/file?id=<id>');
   console.log('  GET         /api/users');
   console.log('  POST        /api/users');
