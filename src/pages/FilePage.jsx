@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback, useRef } from 'react';
+import { useEffect, useState, useCallback, useRef, useMemo } from 'react';
 import { useParams, useNavigate, useOutletContext } from 'react-router-dom';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -6,6 +6,7 @@ import rehypeCollapsibleHeadings from '../utils/rehypeCollapsibleHeadings';
 import { useAuth } from '../contexts/AuthContext';
 import { useWorkspace } from '../contexts/WorkspaceContext';
 import { fetchDocument, saveDocument, deleteDocument } from '../hooks/useDocuments';
+import { getOrderedDocuments, getLockedDocumentIds } from '../utils/reviewOrder';
 import RichTextEditor from '../components/RichTextEditor';
 import GraphView, { DEFAULT_SETTINGS } from '../components/GraphView';
 import TableOfContents from '../components/TableOfContents';
@@ -148,7 +149,7 @@ export default function FilePage() {
   const { user, role } = useAuth();
   const { currentWorkspace } = useWorkspace();
   const workspaceId = currentWorkspace?.id ?? null;
-  const { refreshDocuments, onReviewSubmissionUpdated } = useOutletContext() ?? {};
+  const { refreshDocuments, onReviewSubmissionUpdated, reviewDocs = [], reviewSubmissions = {} } = useOutletContext() ?? {};
 
   const [doc, setDoc] = useState(null);
   const [content, setContent] = useState('');
@@ -407,6 +408,15 @@ export default function FilePage() {
   const isReviewing    = role === 'reviewer' && submission?.status === 'draft';
   const isReviewComplete = role === 'reviewer' && submission?.status === 'complete';
 
+  // Sequential review: is this document locked?
+  const isLocked = useMemo(() => {
+    if (role !== 'reviewer') return false;
+    if (!currentWorkspace?.enforceSequentialReview) return false;
+    const ordered = getOrderedDocuments(reviewDocs);
+    const lockedIds = getLockedDocumentIds(ordered, reviewSubmissions);
+    return lockedIds.has(id);
+  }, [role, currentWorkspace, reviewDocs, reviewSubmissions, id]);
+
   if (loading) {
     return (
       <div className="file-loading">
@@ -428,6 +438,18 @@ export default function FilePage() {
 
   return (
     <div className="file-page">
+      {/* Sequential review lock banner */}
+      {isLocked && (
+        <div className="fp-locked-banner">
+          <span className="fp-locked-icon" aria-hidden="true">🔒</span>
+          <span className="fp-locked-msg">
+            This document is locked. Complete the previous document in the sequence to unlock it.
+          </span>
+          <button className="fp-locked-back" onClick={() => navigate('/reviewer')}>
+            ← Back to documents
+          </button>
+        </div>
+      )}
       {/* Pre-survey modal — reviewer only, gate before reading */}
       {showPreSurveyModal && (
         <PreSurveyModal

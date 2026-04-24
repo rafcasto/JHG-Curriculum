@@ -83,11 +83,16 @@ export default function EarlyAccessManager({ getToken }) {
   const [instructionFileId, setInstructionFileId] = useState('');
   const [savingInstruction, setSavingInstruction] = useState(false);
 
+  // Sequential review flag
+  const [enforceSequential, setEnforceSequential] = useState(false);
+  const [savingSequential, setSavingSequential] = useState(false);
+
   const workspaceId = currentWorkspace?.id ?? null;
 
   // Sync instruction file field from workspace
   useEffect(() => {
     setInstructionFileId(currentWorkspace?.instructionFileId ?? '');
+    setEnforceSequential(currentWorkspace?.enforceSequentialReview ?? false);
   }, [currentWorkspace]);
 
   const fetchDocuments = useCallback(async () => {
@@ -250,6 +255,27 @@ export default function EarlyAccessManager({ getToken }) {
       setError(e.message);
     } finally {
       setSavingInstruction(false);
+    }
+  }
+
+  async function handleSaveSequential(value) {
+    if (!workspaceId) return;
+    setSavingSequential(true);
+    setError(null);
+    try {
+      const token = await getToken();
+      const res = await fetch(`/api/workspaces?id=${encodeURIComponent(workspaceId)}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ enforceSequentialReview: value }),
+      });
+      if (!res.ok) throw new Error((await res.json()).error ?? 'Failed to save');
+      setEnforceSequential(value);
+      await refreshWorkspaces();
+    } catch (e) {
+      setError(e.message);
+    } finally {
+      setSavingSequential(false);
     }
   }
 
@@ -436,6 +462,36 @@ export default function EarlyAccessManager({ getToken }) {
             Currently set: <strong>{instructionFileName}</strong>
           </p>
         )}
+      </div>
+
+      {/* ── Sequential review ──────────────────────────────────────── */}
+      <div className="ea-instruction-card">
+        <div className="ea-instruction-header">
+          <span className="ea-instruction-title">Sequential review</span>
+          <p className="ea-instruction-desc">
+            When enabled, reviewers must complete each document (finish the post-survey) before
+            the next one becomes accessible. Documents shown in the same order as the reviewer
+            sidebar and table of contents.
+          </p>
+        </div>
+        <div className="ea-sequential-row">
+          <label className="ea-sequential-label">
+            <input
+              type="checkbox"
+              className="ea-sequential-checkbox"
+              checked={enforceSequential}
+              disabled={savingSequential}
+              onChange={(e) => handleSaveSequential(e.target.checked)}
+            />
+            <span>Enforce sequential review order</span>
+          </label>
+          {savingSequential && <span className="ea-sequential-saving">Saving…</span>}
+          {!savingSequential && (
+            <span className={`ea-sequential-status ${enforceSequential ? 'ea-sequential-status--on' : 'ea-sequential-status--off'}`}>
+              {enforceSequential ? 'On' : 'Off'}
+            </span>
+          )}
+        </div>
       </div>
     </section>
   );

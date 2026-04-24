@@ -1,5 +1,7 @@
 import { useMemo, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useOutletContext } from 'react-router-dom';
+import { useWorkspace } from '../contexts/WorkspaceContext';
+import { getOrderedDocuments, getLockedDocumentIds } from '../utils/reviewOrder';
 import './ReviewerSidebar.css';
 
 const STATUS_META = {
@@ -39,6 +41,16 @@ export default function ReviewerSidebar({ documents = [], submissions = {}, load
   const { id: activeId } = useParams();
   const [search, setSearch] = useState('');
   const [collapsed, setCollapsed] = useState({});
+  const { currentWorkspace } = useWorkspace();
+  const { reviewSubmissions = {} } = useOutletContext() ?? {};
+  const enforceSequential = currentWorkspace?.enforceSequentialReview ?? false;
+
+  // Compute locked IDs across all documents (ignores search filter)
+  const lockedIds = useMemo(() => {
+    if (!enforceSequential) return new Set();
+    const ordered = getOrderedDocuments(documents);
+    return getLockedDocumentIds(ordered, reviewSubmissions);
+  }, [enforceSequential, documents, reviewSubmissions]);
 
   const grouped = useMemo(() => {
     const q = search.toLowerCase().trim();
@@ -104,18 +116,24 @@ export default function ReviewerSidebar({ documents = [], submissions = {}, load
               <ul className="rsb-file-list">
                 {grouped[key].map((doc) => {
                   const sub = submissions[doc.driveFileId];
-                  const status = submissionStatus(sub);
+                  const isLocked = enforceSequential && lockedIds.has(doc.driveFileId);
+                  const status = isLocked ? 'not_started' : submissionStatus(sub);
                   const meta = STATUS_META[status];
                   const isActive = doc.driveFileId === activeId;
 
                   return (
                     <li key={doc.id}>
                       <button
-                        className={`rsb-file-btn${isActive ? ' active' : ''}`}
-                        onClick={() => navigate(`/file/${doc.driveFileId}`)}
+                        className={`rsb-file-btn${isActive ? ' active' : ''}${isLocked ? ' rsb-file-btn--locked' : ''}`}
+                        onClick={() => !isLocked && navigate(`/file/${doc.driveFileId}`)}
+                        disabled={isLocked}
+                        title={isLocked ? 'Complete the previous document first' : undefined}
                       >
                         <span className="rsb-file-name">{doc.title}</span>
-                        <span className={`rsb-badge ${meta.className}`}>{meta.label}</span>
+                        {isLocked
+                          ? <span className="rsb-badge rsb-status--locked">🔒</span>
+                          : <span className={`rsb-badge ${meta.className}`}>{meta.label}</span>
+                        }
                       </button>
                     </li>
                   );

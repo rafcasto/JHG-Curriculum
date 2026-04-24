@@ -3,6 +3,7 @@ import { useNavigate, useOutletContext } from 'react-router-dom';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import rehypeCollapsibleHeadings from '../utils/rehypeCollapsibleHeadings';
+import { getOrderedDocuments, getLockedDocumentIds } from '../utils/reviewOrder';
 import { useWorkspace } from '../contexts/WorkspaceContext';
 import { useAuth } from '../contexts/AuthContext';
 import './ReviewerPage.css';
@@ -122,10 +123,18 @@ function getFolder(doc) {
 }
 
 export default function ReviewerPage() {
-  const { reviewDocs = [], reviewLoading = false } = useOutletContext() ?? {};
+  const { reviewDocs = [], reviewLoading = false, reviewSubmissions = {} } = useOutletContext() ?? {};
   const navigate = useNavigate();
   const { currentWorkspace } = useWorkspace();
   const { user } = useAuth();
+
+  const enforceSequential = currentWorkspace?.enforceSequentialReview ?? false;
+
+  const lockedIds = useMemo(() => {
+    if (!enforceSequential) return new Set();
+    const ordered = getOrderedDocuments(reviewDocs);
+    return getLockedDocumentIds(ordered, reviewSubmissions);
+  }, [enforceSequential, reviewDocs, reviewSubmissions]);
 
   // Instruction file
   const instructionFileId = currentWorkspace?.instructionFileId ?? null;
@@ -220,16 +229,22 @@ export default function ReviewerPage() {
         <section key={folder} className="rv-toc-section">
           <h2 className="rv-toc-folder">{folder}</h2>
           <ul className="rv-toc-files">
-            {files.map((doc) => (
-              <li key={doc.id}>
-                <button
-                  className="rv-toc-file-link"
-                  onClick={() => navigate(`/file/${doc.driveFileId}`)}
-                >
-                  {doc.title}
-                </button>
-              </li>
-            ))}
+            {files.map((doc) => {
+              const isLocked = enforceSequential && lockedIds.has(doc.driveFileId);
+              return (
+                <li key={doc.id}>
+                  <button
+                    className={`rv-toc-file-link${isLocked ? ' rv-toc-file-link--locked' : ''}`}
+                    onClick={() => !isLocked && navigate(`/file/${doc.driveFileId}`)}
+                    disabled={isLocked}
+                    title={isLocked ? 'Complete the previous document first' : undefined}
+                  >
+                    {isLocked && <span className="rv-toc-lock" aria-hidden="true">🔒</span>}
+                    {doc.title}
+                  </button>
+                </li>
+              );
+            })}
           </ul>
         </section>
       ))}

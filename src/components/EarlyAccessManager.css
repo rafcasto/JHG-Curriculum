@@ -353,3 +353,48 @@
   color: var(--text-muted);
   margin: 0.5rem 0 0;
 }
+
+/* ── Sequential review card ──────────────────────────────────────────────── */
+.ea-sequential-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.ea-sequential-label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+  font-size: 0.9rem;
+  color: var(--text-primary);
+}
+
+.ea-sequential-checkbox {
+  width: 1rem;
+  height: 1rem;
+  cursor: pointer;
+  accent-color: var(--accent);
+}
+
+.ea-sequential-saving {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+}
+
+.ea-sequential-status {
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 0.15rem 0.5rem;
+  border-radius: 999px;
+}
+
+.ea-sequential-status--on {
+  background: color-mix(in srgb, var(--accent) 15%, transparent);
+  color: var(--accent);
+}
+
+.ea-sequential-status--off {
+  background: color-mix(in srgb, var(--text-muted) 15%, transparent);
+  color: var(--text-muted);
+}

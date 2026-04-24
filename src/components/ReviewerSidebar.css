@@ -188,6 +188,21 @@
   color: var(--color-success);
 }
 
+/* ── Locked item ─────────────────────────────────────────────────────────── */
+.rsb-file-btn--locked {
+  opacity: 0.45;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+.rsb-status--locked {
+  font-size: 0.7rem;
+  background: transparent;
+  border-color: transparent;
+  color: var(--text-muted);
+  padding: 0.15rem 0.25rem;
+}
+
 /* ── Spinner (reuse global if defined; fallback here) ────────────────────── */
 .rsb-loading .spinner {
   width: 22px;
