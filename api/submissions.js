@@ -145,7 +145,28 @@ export default async function handler(req, res) {
     let claims;
     try { claims = await requireAuth(req); } catch (e) { return res.status(e.status ?? 500).json({ error: e.message }); }
 
-    const { documentId, all, admin } = req.query;
+    const { documentId, documentIds, batch, all, admin } = req.query;
+
+    // ── Batch mode: ?documentIds=id1,id2,...&batch=true (reviewer fetching own submissions) ─
+    if (batch === 'true' && documentIds) {
+      const ids = documentIds.split(',').map((s) => s.trim()).filter(Boolean);
+      if (ids.length === 0) return res.status(400).json({ error: 'documentIds is empty' });
+      if (ids.length > 500) return res.status(400).json({ error: 'documentIds exceeds 500 limit' });
+      try {
+        const refs = ids.map((dId) => db.collection('submissions').doc(`${claims.uid}_${dId}`));
+        const snaps = await db.getAll(...refs);
+        const result = {};
+        for (const snap of snaps) {
+          // Submission doc id is `${uid}_${driveFileId}` — extract driveFileId
+          const driveFileId = snap.id.slice(claims.uid.length + 1);
+          result[driveFileId] = snap.exists ? { id: snap.id, ...snap.data() } : null;
+        }
+        return res.json(result);
+      } catch (e) {
+        console.error('[api/submissions GET batch]', e.message);
+        return res.status(500).json({ error: e.message });
+      }
+    }
 
     // Admin: list ALL complete submissions across all documents
     if (!documentId && admin === 'true') {

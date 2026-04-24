@@ -11,7 +11,7 @@ import GraphView, { DEFAULT_SETTINGS } from '../components/GraphView';
 import TableOfContents from '../components/TableOfContents';
 import PreSurveyModal from '../components/PreSurveyModal';
 import PostSurveyModal from '../components/PostSurveyModal';
-import { doc as firestoreDoc, setDoc, deleteDoc, onSnapshot, serverTimestamp, getDoc } from 'firebase/firestore';
+import { doc as firestoreDoc, setDoc, deleteDoc, onSnapshot, serverTimestamp } from 'firebase/firestore';
 import { db } from '../firebase';
 import './FilePage.css';
 
@@ -240,9 +240,9 @@ export default function FilePage() {
     if (!user || !canEdit || readOnly) return;
     const lockDocRef = firestoreDoc(db, 'fileLocks', id);
     try {
-      const snap = await getDoc(lockDocRef);
-      if (snap.exists()) {
-        const lock = snap.data();
+      // lockInfo is already kept current by the onSnapshot listener — no extra read needed
+      if (lockInfo) {
+        const lock = lockInfo;
         if (lock.lockedBy !== user.uid) {
           const lockedAt = lock.lockedAt?.toDate?.() ?? null;
           const isStale = lockedAt ? (Date.now() - lockedAt.getTime()) > STALE_LOCK_MS : false;

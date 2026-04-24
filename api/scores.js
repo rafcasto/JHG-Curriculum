@@ -56,8 +56,45 @@ export default async function handler(req, res) {
     return res.status(e.status ?? 500).json({ error: e.message });
   }
 
-  const { documentId } = req.query;
-  if (!documentId) return res.status(400).json({ error: 'Missing ?documentId parameter' });
+  const { documentId, documentIds } = req.query;
+
+  // ── Batch mode: ?documentIds=id1,id2,... ────────────────────────────────
+  if (documentIds) {
+    const ids = documentIds.split(',').map((s) => s.trim()).filter(Boolean);
+    if (ids.length === 0) return res.status(400).json({ error: 'documentIds is empty' });
+    if (ids.length > 500) return res.status(400).json({ error: 'documentIds exceeds 500 limit' });
+    try {
+      const refs = ids.map((id) => db.collection('scores').doc(id));
+      const snaps = await db.getAll(...refs);
+      const result = {};
+      const isAdmin = claims.role === 'admin';
+      for (const snap of snaps) {
+        const docId = snap.id;
+        if (!snap.exists) {
+          result[docId] = {
+            documentId: docId,
+            averageQualityScore: null,
+            averageConfidenceDelta: null,
+            totalSubmissions: 0,
+            scoreDistribution: { excellent: 0, good: 0, needsWork: 0, rethink: 0 },
+            lastUpdated: null,
+          };
+        } else {
+          const data = snap.data();
+          result[docId] = isAdmin
+            ? { id: snap.id, ...data }
+            : { documentId: docId, averageQualityScore: data.averageQualityScore, totalSubmissions: data.totalSubmissions };
+        }
+      }
+      return res.json(result);
+    } catch (e) {
+      console.error('[api/scores GET batch]', e.message);
+      return res.status(500).json({ error: e.message });
+    }
+  }
+
+  // ── Single mode: ?documentId=<id> ───────────────────────────────────────
+  if (!documentId) return res.status(400).json({ error: 'Missing ?documentId or ?documentIds parameter' });
 
   try {
     const snap = await db.collection('scores').doc(documentId).get();
@@ -74,7 +111,6 @@ export default async function handler(req, res) {
 
     const data = snap.data();
     if (claims.role !== 'admin') {
-      // Non-admins get summary only
       return res.json({
         documentId,
         averageQualityScore: data.averageQualityScore,

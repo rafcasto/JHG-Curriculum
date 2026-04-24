@@ -103,18 +103,18 @@ export default function EarlyAccessManager({ getToken }) {
       const docs = await res.json();
       setDocuments(docs);
 
-      const scoreResults = await Promise.allSettled(
-        docs.map(async (doc) => {
-          const sr = await fetch(`/api/scores?documentId=${encodeURIComponent(doc.driveFileId)}`, {
+      // Batch-fetch all scores in a single API call instead of N individual requests
+      const scoreMap = {};
+      if (docs.length > 0) {
+        const ids = docs.map((d) => d.driveFileId).join(',');
+        try {
+          const sr = await fetch(`/api/scores?documentIds=${encodeURIComponent(ids)}`, {
             headers: { Authorization: `Bearer ${token}` },
           });
-          const sd = await sr.json();
-          return { docId: doc.driveFileId, data: sd };
-        })
-      );
-      const scoreMap = {};
-      for (const r of scoreResults) {
-        if (r.status === 'fulfilled') scoreMap[r.value.docId] = r.value.data;
+          if (sr.ok) Object.assign(scoreMap, await sr.json());
+        } catch {
+          // non-critical — scores will be empty
+        }
       }
       setScores(scoreMap);
     } catch (e) {

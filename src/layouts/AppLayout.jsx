@@ -81,20 +81,23 @@ export default function AppLayout() {
       if (signal?.aborted) return;
       setReviewDocs(enrichedDocs);
 
-      const subResults = await Promise.allSettled(
-        docs.map(async (doc) => {
+      // Batch-fetch all submission statuses in a single API call
+      const subMap = {};
+      if (docs.length > 0) {
+        const ids = docs.map((d) => d.driveFileId).join(',');
+        try {
           const res = await fetch(
-            `/api/submissions?documentId=${encodeURIComponent(doc.driveFileId)}`,
+            `/api/submissions?documentIds=${encodeURIComponent(ids)}&batch=true`,
             { headers: { Authorization: `Bearer ${token}` } }
           );
-          const data = res.ok ? await res.json() : null;
-          return { driveFileId: doc.driveFileId, submission: data };
-        })
-      );
-      const subMap = {};
-      for (const r of subResults) {
-        if (r.status === 'fulfilled' && r.value.submission) {
-          subMap[r.value.driveFileId] = r.value.submission;
+          if (res.ok && !signal?.aborted) {
+            const batchData = await res.json();
+            for (const [driveFileId, submission] of Object.entries(batchData)) {
+              if (submission) subMap[driveFileId] = submission;
+            }
+          }
+        } catch {
+          // non-fatal
         }
       }
       if (!signal?.aborted) setReviewSubmissions(subMap);

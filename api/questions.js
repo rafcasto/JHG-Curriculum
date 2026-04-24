@@ -73,17 +73,20 @@ export default async function handler(req, res) {
     const isAdmin = claims.role === 'admin';
 
     try {
-      const snapshot = await db.collection('questions').orderBy('order', 'asc').get();
+      // Build query — push stable equality filters to Firestore to reduce docs read
+      let queryRef = db.collection('questions');
+      if (touchpoint && VALID_TOUCHPOINTS.includes(touchpoint)) {
+        queryRef = queryRef.where('touchpoint', '==', touchpoint);
+      }
+      if (!isAdmin || activeOnly === 'true') {
+        queryRef = queryRef.where('active', '==', true);
+      }
+      queryRef = queryRef.orderBy('order', 'asc');
+
+      const snapshot = await queryRef.get();
       let questions = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
 
-      if (touchpoint && VALID_TOUCHPOINTS.includes(touchpoint)) {
-        questions = questions.filter((q) => q.touchpoint === touchpoint);
-      }
-      // Non-admins always see active questions only
-      if (!isAdmin || activeOnly === 'true') {
-        questions = questions.filter((q) => q.active === true);
-      }
-      // Filter by workspace: return global questions (no workspaceId) + matching workspace questions
+      // Workspace filter requires OR semantics (not natively supported by Firestore)
       if (workspaceId) {
         questions = questions.filter((q) => !q.workspaceId || q.workspaceId === workspaceId);
       }
