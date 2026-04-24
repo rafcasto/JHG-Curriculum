@@ -138,10 +138,12 @@ export default async function handler(req, res) {
       if (meta.data.mimeType === 'application/vnd.google-apps.document') {
         return res.status(400).json({ error: 'Google Docs cannot be renamed from this app' });
       }
-      const updated = await drive.files.update(
-        { fileId: patchId, supportsAllDrives: true, fields: 'id, name' },
-        { requestBody: { name: safeName } }
-      );
+      const updated = await drive.files.update({
+        fileId: patchId,
+        supportsAllDrives: true,
+        fields: 'id, name',
+        requestBody: { name: safeName },
+      });
       return res.json({ id: updated.data.id, name: updated.data.name });
     } catch (err) {
       console.error('[api/file PATCH]', err.message);
@@ -200,10 +202,12 @@ export default async function handler(req, res) {
         return res.status(400).json({ error: 'Google Docs are read-only in this app' });
       }
 
-      await drive.files.update(
-        { fileId: id, supportsAllDrives: true },
-        { requestBody: { mimeType: 'text/plain' }, media: { mimeType: 'text/plain', body: content } }
-      );
+      await drive.files.update({
+        fileId: id,
+        supportsAllDrives: true,
+        requestBody: { mimeType: 'text/plain' },
+        media: { mimeType: 'text/plain', body: content },
+      });
 
       return res.json({ ok: true });
     } catch (err) {
