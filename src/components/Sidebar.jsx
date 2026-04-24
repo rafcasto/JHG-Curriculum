@@ -7,7 +7,7 @@ import './Sidebar.css';
 
 function getModule(doc) {
   const p = doc.path ?? '';
-  if (!p.includes('/')) return 'other';
+  if (!p.includes('/')) return '__root__';
   return p.split('/')[0];
 }
 
@@ -190,7 +190,7 @@ export default function Sidebar({ documents, loading = false, onRefresh, onDocum
   }, [documents, search]);
 
   const sortedModules = Object.keys(grouped).sort((a, b) =>
-    a === 'other' ? 1 : b === 'other' ? -1 : a.localeCompare(b)
+    a === '__root__' ? -1 : b === '__root__' ? 1 : a.localeCompare(b)
   );
 
   function toggle(key) {
@@ -220,27 +220,7 @@ export default function Sidebar({ documents, loading = false, onRefresh, onDocum
       <nav className="sidebar-nav">
         {sortedModules.map((key) => (
           <div key={key} className="module-group">
-            <div className="module-header-row">
-              <button
-                className="module-header"
-                onClick={() => toggle(key)}
-              >
-                <span className={`chevron ${collapsed[key] ? '' : 'open'}`}>›</span>
-                <span className="module-name">{moduleLabel(key)}</span>
-                <span className="module-count">{grouped[key].length}</span>
-              </button>
-              {canEdit && (
-                <button
-                  className="module-add-btn"
-                  onClick={() => openModalForFolder(key)}
-                  title={`Add file to ${moduleLabel(key)}`}
-                >
-                  +
-                </button>
-              )}
-            </div>
-
-            {!collapsed[key] && (
+            {key === '__root__' ? (
               <ul className="module-files">
                 {grouped[key].map((doc) => (
                   <li key={doc.id}>
@@ -286,6 +266,76 @@ export default function Sidebar({ documents, loading = false, onRefresh, onDocum
                   </li>
                 ))}
               </ul>
+            ) : (
+              <>
+                <div className="module-header-row">
+                  <button
+                    className="module-header"
+                    onClick={() => toggle(key)}
+                  >
+                    <span className={`chevron ${collapsed[key] ? '' : 'open'}`}>›</span>
+                    <span className="module-name">{moduleLabel(key)}</span>
+                    <span className="module-count">{grouped[key].length}</span>
+                  </button>
+                  {canEdit && (
+                    <button
+                      className="module-add-btn"
+                      onClick={() => openModalForFolder(key)}
+                      title={`Add file to ${moduleLabel(key)}`}
+                    >
+                      +
+                    </button>
+                  )}
+                </div>
+
+                {!collapsed[key] && (
+                  <ul className="module-files">
+                    {grouped[key].map((doc) => (
+                  <li key={doc.id}>
+                    {renamingId === doc.id ? (
+                      <div className="rename-row">
+                        <input
+                          className="rename-input"
+                          value={renameValue}
+                          onChange={(e) => setRenameValue(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') { e.preventDefault(); confirmRename(doc); }
+                            if (e.key === 'Escape') cancelRename();
+                          }}
+                          autoFocus
+                        />
+                        <button className="rename-confirm-btn" onClick={() => confirmRename(doc)} title="Save">✓</button>
+                        <button className="rename-cancel-btn" onClick={cancelRename} title="Cancel">✕</button>
+                      </div>
+                    ) : (
+                      <div className="file-row">
+                        <button
+                          className={`file-btn ${doc.id === activeId ? 'active' : ''}`}
+                          onClick={() => navigate(`/file/${doc.id}`)}
+                          title={doc.title}
+                        >
+                          <span className="file-type-dot" data-type={inferType(doc)} />
+                          <span className="file-name">{doc.title ?? doc.id}</span>
+                        </button>
+                        {canEdit && doc.mimeType !== 'application/vnd.google-apps.document' && (
+                          <button
+                            className="rename-btn"
+                            onClick={() => startRename(doc)}
+                            title="Rename file"
+                          >
+                            ✎
+                          </button>
+                        )}
+                      </div>
+                    )}
+                    {renameError?.id === doc.id && (
+                      <p className="rename-error">{renameError.message}</p>
+                    )}
+                  </li>
+                ))}
+                  </ul>
+                )}
+              </>
             )}
           </div>
         ))}
