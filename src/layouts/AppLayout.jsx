@@ -1,5 +1,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { Outlet } from 'react-router-dom';
+import { collection, query, where, onSnapshot } from 'firebase/firestore';
+import { db } from '../firebase';
 import Navbar from '../components/Navbar';
 import Sidebar from '../components/Sidebar';
 import ReviewerSidebar from '../components/ReviewerSidebar';
@@ -99,6 +101,28 @@ export default function AppLayout() {
   useEffect(() => {
     loadReviewerData();
   }, [loadReviewerData]);
+
+  // Keep reviewer sidebar titles in sync with Firestore in real-time.
+  // When an admin/editor renames a file, the PATCH endpoint updates Firestore,
+  // and this listener propagates the new title immediately without a page reload.
+  useEffect(() => {
+    if (!isReviewer || !currentWorkspace?.id) return;
+    const q = query(
+      collection(db, 'documents'),
+      where('workspaceId', '==', currentWorkspace.id)
+    );
+    const unsub = onSnapshot(q, (snap) => {
+      const titleMap = {};
+      snap.docs.forEach((d) => {
+        const data = d.data();
+        if (data.driveFileId && data.title) titleMap[data.driveFileId] = data.title;
+      });
+      setReviewDocs((prev) =>
+        prev.map((d) => (titleMap[d.driveFileId] ? { ...d, title: titleMap[d.driveFileId] } : d))
+      );
+    });
+    return () => unsub();
+  }, [isReviewer, currentWorkspace?.id]);
 
   /** Called from FilePage when a reviewer's submission changes (warmup or complete). */
   const onReviewSubmissionUpdated = useCallback((driveFileId, submission) => {

@@ -157,6 +157,17 @@
   text-overflow: ellipsis;
 }
 
+/* Lock notice — shown when another user is currently editing this file */
+.lock-notice {
+  color: var(--color-warning, #d29922);
+  font-size: 0.78rem;
+  font-weight: 500;
+  white-space: nowrap;
+  max-width: 240px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 /* ── Delete button ────────────────────────────────────────────────────────── */
 .delete-btn {
   background: none;

@@ -11,6 +11,8 @@ import GraphView, { DEFAULT_SETTINGS } from '../components/GraphView';
 import TableOfContents from '../components/TableOfContents';
 import PreSurveyModal from '../components/PreSurveyModal';
 import PostSurveyModal from '../components/PostSurveyModal';
+import { doc as firestoreDoc, setDoc, deleteDoc, onSnapshot, serverTimestamp, getDoc } from 'firebase/firestore';
+import { db } from '../firebase';
 import './FilePage.css';
 
 /** Convert heading text to a URL-safe id for anchor links. */
@@ -128,6 +130,8 @@ const markdownComponents = {
   blockquote: Callout,
 };
 
+const STALE_LOCK_MS = 30 * 60 * 1000; // 30 minutes — lock is considered stale after this
+
 /** Split raw file content into the YAML frontmatter block and the markdown body. */
 function splitFrontmatter(raw = '') {
   if (!raw.startsWith('---')) return { frontmatter: '', body: raw };
@@ -180,6 +184,10 @@ export default function FilePage() {
   // Scroll container ref for the TOC intersection observer
   const scrollRef = useRef(null);
 
+  // Edit lock — real-time state of who currently holds edit access on this file
+  const [lockInfo, setLockInfo] = useState(null);
+  const lockOwnedRef = useRef(false); // true when this client holds the lock
+
   // Local graph panel
   const [showGraph, setShowGraph]       = useState(false);
   const [graphData, setGraphData]       = useState(null);
@@ -196,6 +204,63 @@ export default function FilePage() {
     }
     setShowGraph((v) => !v);
   }, [showGraph, graphData, graphLoading]);
+
+  // Subscribe to this file's lock document in real-time (all roles)
+  useEffect(() => {
+    const lockDocRef = firestoreDoc(db, 'fileLocks', id);
+    const unsub = onSnapshot(lockDocRef, (snap) => {
+      setLockInfo(snap.exists() ? snap.data() : null);
+    });
+    return () => unsub();
+  }, [id]);
+
+  // Release our lock when navigating away or when the file id changes
+  useEffect(() => {
+    const lockDocRef = firestoreDoc(db, 'fileLocks', id);
+    return () => {
+      if (lockOwnedRef.current) {
+        lockOwnedRef.current = false;
+        deleteDoc(lockDocRef).catch(() => {});
+      }
+    };
+  }, [id]);
+
+  const releaseLock = useCallback(async () => {
+    if (!lockOwnedRef.current) return;
+    lockOwnedRef.current = false;
+    try { await deleteDoc(firestoreDoc(db, 'fileLocks', id)); } catch {}
+  }, [id]);
+
+  const handleEnterPreview = useCallback(async () => {
+    await releaseLock();
+    setMode('preview');
+  }, [releaseLock]);
+
+  const handleEnterEdit = useCallback(async () => {
+    if (!user || !canEdit || readOnly) return;
+    const lockDocRef = firestoreDoc(db, 'fileLocks', id);
+    try {
+      const snap = await getDoc(lockDocRef);
+      if (snap.exists()) {
+        const lock = snap.data();
+        if (lock.lockedBy !== user.uid) {
+          const lockedAt = lock.lockedAt?.toDate?.() ?? null;
+          const isStale = lockedAt ? (Date.now() - lockedAt.getTime()) > STALE_LOCK_MS : false;
+          if (!isStale) return; // blocked — another user is actively editing
+        }
+      }
+      await setDoc(lockDocRef, {
+        lockedBy: user.uid,
+        lockedByEmail: user.email ?? '',
+        lockedAt: serverTimestamp(),
+      });
+      lockOwnedRef.current = true;
+      setMode('edit');
+    } catch {
+      // Degrade gracefully on Firestore error — don't block editing
+      setMode('edit');
+    }
+  }, [user, canEdit, readOnly, id]);
 
   useEffect(() => {
     setLoading(true);
@@ -416,17 +481,28 @@ export default function FilePage() {
             <div className="mode-toggle">
               <button
                 className={`mode-btn ${mode === 'preview' ? 'active' : ''}`}
-                onClick={() => setMode('preview')}
+                onClick={handleEnterPreview}
               >
                 Preview
               </button>
               <button
                 className={`mode-btn ${mode === 'edit' ? 'active' : ''}`}
-                onClick={() => setMode('edit')}
+                onClick={handleEnterEdit}
+                disabled={!!(lockInfo && user && lockInfo.lockedBy !== user.uid)}
+                title={
+                  lockInfo && user && lockInfo.lockedBy !== user.uid
+                    ? `Locked by ${lockInfo.lockedByEmail || 'another user'}`
+                    : 'Edit (⌘E)'
+                }
               >
                 Edit
               </button>
             </div>
+            {lockInfo && user && lockInfo.lockedBy !== user.uid && (
+              <span className="lock-notice">
+                🔒 {lockInfo.lockedByEmail || 'Another user'} is editing
+              </span>
+            )}
             {mode === 'edit' && (
               <>
                 <button

@@ -11,6 +11,7 @@ import { google } from 'googleapis';
 import matter from 'gray-matter';
 import { basename } from 'path';
 import { initializeApp, cert, getApps, getApp } from 'firebase-admin/app';
+import { getFirestore } from 'firebase-admin/firestore';
 
 const serviceAccount = {
   type: process.env.GOOGLE_TYPE,
@@ -144,6 +145,19 @@ export default async function handler(req, res) {
         fields: 'id, name',
         requestBody: { name: safeName },
       });
+
+      // Sync updated title into any matching Firestore documents records
+      const newTitle = safeName.replace(/\.md$/i, '');
+      try {
+        const fsdb = getFirestore();
+        const snap = await fsdb.collection('documents').where('driveFileId', '==', patchId).get();
+        if (!snap.empty) {
+          await Promise.all(snap.docs.map((d) => d.ref.update({ title: newTitle })));
+        }
+      } catch (fsErr) {
+        console.warn('[api/file PATCH] Firestore title sync failed:', fsErr.message);
+      }
+
       return res.json({ id: updated.data.id, name: updated.data.name });
     } catch (err) {
       console.error('[api/file PATCH]', err.message);
