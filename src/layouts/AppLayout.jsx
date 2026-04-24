@@ -30,11 +30,14 @@ export default function AppLayout() {
 
   useEffect(() => {
     if (isReviewer) { setLoading(false); return; }
+    let cancelled = false;
+    setDocuments([]);
     setLoading(true);
     fetchAllDocuments(currentWorkspace?.driveFolderId ?? null)
-      .then(setDocuments)
+      .then((data) => { if (!cancelled) setDocuments(data); })
       .catch(console.error)
-      .finally(() => setLoading(false));
+      .finally(() => { if (!cancelled) setLoading(false); });
+    return () => { cancelled = true; };
   }, [currentWorkspace, isReviewer]);
 
   // ── Reviewer: assigned documents + submission statuses ─────────────────
@@ -42,10 +45,13 @@ export default function AppLayout() {
   const [reviewSubmissions, setReviewSubmissions] = useState({});
   const [reviewLoading, setReviewLoading] = useState(false);
 
-  const loadReviewerData = useCallback(async () => {
+  const loadReviewerData = useCallback(async (signal) => {
     if (!isReviewer || !currentWorkspace?.id || !user) return;
+    setReviewDocs([]);
+    setReviewSubmissions({});
     setReviewLoading(true);
     try {
+      if (signal?.aborted) return;
       const token = await user.getIdToken();
 
       // Fetch assigned docs and Drive file list in parallel
@@ -57,7 +63,7 @@ export default function AppLayout() {
         fetchAllDocuments(currentWorkspace?.driveFolderId ?? null).catch(() => []),
       ]);
 
-      if (!docsRes.ok) return;
+      if (!docsRes.ok || signal?.aborted) return;
       const docs = await docsRes.json();
 
       // Build driveFileId → path map so we can group by folder (module) like editors
@@ -72,6 +78,7 @@ export default function AppLayout() {
         drivePath: pathMap[d.driveFileId] ?? '',
       }));
 
+      if (signal?.aborted) return;
       setReviewDocs(enrichedDocs);
 
       const subResults = await Promise.allSettled(
@@ -90,16 +97,18 @@ export default function AppLayout() {
           subMap[r.value.driveFileId] = r.value.submission;
         }
       }
-      setReviewSubmissions(subMap);
+      if (!signal?.aborted) setReviewSubmissions(subMap);
     } catch {
       // non-fatal
     } finally {
-      setReviewLoading(false);
+      if (!signal?.aborted) setReviewLoading(false);
     }
   }, [isReviewer, currentWorkspace, user]);
 
   useEffect(() => {
-    loadReviewerData();
+    const controller = new AbortController();
+    loadReviewerData(controller.signal);
+    return () => controller.abort();
   }, [loadReviewerData]);
 
   // Keep reviewer sidebar titles in sync with Firestore in real-time.
