@@ -203,6 +203,13 @@
   padding: 0.15rem 0.25rem;
 }
 
+.rsb-status--frontier {
+  font-size: 0.7rem;
+  background: transparent;
+  border-color: transparent;
+  padding: 0.15rem 0.25rem;
+}
+
 /* ── Spinner (reuse global if defined; fallback here) ────────────────────── */
 .rsb-loading .spinner {
   width: 22px;

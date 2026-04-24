@@ -248,6 +248,8 @@ export default function ReviewerPage() {
           <ul className="rv-toc-files">
             {files.map((doc) => {
               const isLocked = enforceSequential && lockedIds.has(doc.driveFileId);
+              const sub = reviewSubmissions[doc.driveFileId];
+              const isFrontier = enforceSequential && !isLocked && sub?.status !== 'complete';
               return (
                 <li key={doc.id}>
                   <button
@@ -257,6 +259,7 @@ export default function ReviewerPage() {
                     title={isLocked ? 'Complete the previous document first' : undefined}
                   >
                     {isLocked && <span className="rv-toc-lock" aria-hidden="true">🔒</span>}
+                    {isFrontier && <span className="rv-toc-lock" aria-hidden="true">🔓</span>}
                     {doc.title}
                   </button>
                 </li>

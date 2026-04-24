@@ -120,6 +120,8 @@ export default function ReviewerSidebar({ documents = [], submissions = {}, load
                   const status = isLocked ? 'not_started' : submissionStatus(sub);
                   const meta = STATUS_META[status];
                   const isActive = doc.driveFileId === activeId;
+                  // Frontier doc: sequential mode, not locked, not yet complete → show open lock
+                  const isFrontier = enforceSequential && !isLocked && status !== 'complete';
 
                   return (
                     <li key={doc.id}>
@@ -132,7 +134,9 @@ export default function ReviewerSidebar({ documents = [], submissions = {}, load
                         <span className="rsb-file-name">{doc.title}</span>
                         {isLocked
                           ? <span className="rsb-badge rsb-status--locked">🔒</span>
-                          : <span className={`rsb-badge ${meta.className}`}>{meta.label}</span>
+                          : isFrontier
+                            ? <span className="rsb-badge rsb-status--frontier">🔓</span>
+                            : <span className={`rsb-badge ${meta.className}`}>{meta.label}</span>
                         }
                       </button>
                     </li>

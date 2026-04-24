@@ -184,8 +184,8 @@ export default function FilePage() {
 
   // Scroll container ref for the TOC intersection observer
   const scrollRef = useRef(null);
-  // Flag: navigate to /reviewer after post-survey submission (set when Complete is clicked)
-  const pendingNavAfterSurveyRef = useRef(false);
+  // Flag: navigate to a path after post-survey submission (null = no pending nav)
+  const pendingNavAfterSurveyRef = useRef(null);
 
   // Edit lock — real-time state of who currently holds edit access on this file
   const [lockInfo, setLockInfo] = useState(null);
@@ -409,8 +409,9 @@ export default function FilePage() {
     setShowPostSurveyModal(false);
     onReviewSubmissionUpdated?.(id, updatedSub);
     if (pendingNavAfterSurveyRef.current) {
-      pendingNavAfterSurveyRef.current = false;
-      navigate('/reviewer');
+      const target = pendingNavAfterSurveyRef.current;
+      pendingNavAfterSurveyRef.current = null;
+      navigate(target);
     }
   }
 
@@ -450,12 +451,18 @@ export default function FilePage() {
       if (isReviewComplete) {
         navigate('/reviewer');
       } else if (isReviewing) {
-        pendingNavAfterSurveyRef.current = true;
+        pendingNavAfterSurveyRef.current = '/reviewer';
         handleStopReview();
       }
       // isUnreviewed on last doc: button is disabled
     } else if (nextDoc) {
-      navigate(`/file/${nextDoc.driveFileId}`);
+      if (isReviewing) {
+        // Trigger post-survey; navigate to next doc only after survey is submitted
+        pendingNavAfterSurveyRef.current = `/file/${nextDoc.driveFileId}`;
+        handleStopReview();
+      } else {
+        navigate(`/file/${nextDoc.driveFileId}`);
+      }
     }
   }
 
