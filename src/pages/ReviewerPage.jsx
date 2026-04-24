@@ -99,6 +99,13 @@ function Callout({ node, children, ...props }) {
   return <blockquote {...props}>{children}</blockquote>;
 }
 
+function splitFrontmatter(raw = '') {
+  if (!raw.startsWith('---')) return { body: raw };
+  const end = raw.indexOf('\n---', 4);
+  if (end === -1) return { body: raw };
+  return { body: raw.slice(end + 4).replace(/^\n/, '') };
+}
+
 const markdownComponents = {
   h1: makeHeading('h1'),
   h2: makeHeading('h2'),
@@ -181,13 +188,12 @@ export default function ReviewerPage() {
     return (
       <div className="rv-instruction-page">
         <div className="markdown-body">
-          {instructionTitle && <h1>{instructionTitle}</h1>}
           <ReactMarkdown
             remarkPlugins={[remarkGfm]}
             rehypePlugins={[rehypeCollapsibleHeadings]}
             components={markdownComponents}
           >
-            {instructionContent}
+            {splitFrontmatter(instructionContent).body}
           </ReactMarkdown>
         </div>
       </div>
