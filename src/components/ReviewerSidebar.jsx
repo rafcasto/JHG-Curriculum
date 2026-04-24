@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { useNavigate, useParams, useOutletContext } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { useWorkspace } from '../contexts/WorkspaceContext';
 import { getOrderedDocuments, getLockedDocumentIds } from '../utils/reviewOrder';
 import './ReviewerSidebar.css';
@@ -42,15 +42,15 @@ export default function ReviewerSidebar({ documents = [], submissions = {}, load
   const [search, setSearch] = useState('');
   const [collapsed, setCollapsed] = useState({});
   const { currentWorkspace } = useWorkspace();
-  const { reviewSubmissions = {} } = useOutletContext() ?? {};
   const enforceSequential = currentWorkspace?.enforceSequentialReview ?? false;
 
-  // Compute locked IDs across all documents (ignores search filter)
+  // Use the submissions prop — useOutletContext() does NOT work here because
+  // ReviewerSidebar is rendered as a sibling of <Outlet>, outside the outlet tree.
   const lockedIds = useMemo(() => {
     if (!enforceSequential) return new Set();
     const ordered = getOrderedDocuments(documents);
-    return getLockedDocumentIds(ordered, reviewSubmissions);
-  }, [enforceSequential, documents, reviewSubmissions]);
+    return getLockedDocumentIds(ordered, submissions);
+  }, [enforceSequential, documents, submissions]);
 
   const grouped = useMemo(() => {
     const q = search.toLowerCase().trim();

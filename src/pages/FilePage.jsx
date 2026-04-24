@@ -278,6 +278,7 @@ export default function FilePage() {
     setFrozenDuration(null);
     setShowPreSurveyModal(false);
     setShowPostSurveyModal(false);
+    pendingNavAfterSurveyRef.current = null;
     fetchDocument(id)
       .then((data) => {
         if (!data) {
@@ -456,13 +457,15 @@ export default function FilePage() {
       }
       // isUnreviewed on last doc: button is disabled
     } else if (nextDoc) {
-      if (isReviewing) {
-        // Trigger post-survey; navigate to next doc only after survey is submitted
+      if (isReviewComplete) {
+        // Already completed — skip survey, just navigate
+        navigate(`/file/${nextDoc.driveFileId}`);
+      } else if (isReviewing) {
+        // Trigger post-survey; navigate to next doc after survey is submitted
         pendingNavAfterSurveyRef.current = `/file/${nextDoc.driveFileId}`;
         handleStopReview();
-      } else {
-        navigate(`/file/${nextDoc.driveFileId}`);
       }
+      // isUnreviewed: button is disabled, unreachable
     }
   }
 
@@ -761,7 +764,12 @@ export default function FilePage() {
               </button>
             )
           ) : (
-            <button className="fp-nav-btn fp-nav-btn--continue" onClick={handleContinue}>
+            <button
+              className="fp-nav-btn fp-nav-btn--continue"
+              onClick={handleContinue}
+              disabled={isUnreviewed || !submissionChecked}
+              title={isUnreviewed ? 'Start the review first' : undefined}
+            >
               Continue →
             </button>
           )}
