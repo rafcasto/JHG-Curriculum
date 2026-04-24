@@ -2,9 +2,110 @@ import { useMemo, useState, useEffect } from 'react';
 import { useNavigate, useOutletContext } from 'react-router-dom';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import rehypeCollapsibleHeadings from '../utils/rehypeCollapsibleHeadings';
 import { useWorkspace } from '../contexts/WorkspaceContext';
 import { useAuth } from '../contexts/AuthContext';
 import './ReviewerPage.css';
+import './FilePage.css';
+
+// ── Shared markdown rendering helpers (mirrors FilePage) ─────────────────────
+function slugify(text) {
+  return String(text)
+    .toLowerCase()
+    .replace(/\s+/g, '-')
+    .replace(/[^\w-]/g, '');
+}
+
+function makeHeading(Tag) {
+  return function Heading({ children, ...props }) {
+    const text =
+      typeof children === 'string'
+        ? children
+        : Array.isArray(children)
+        ? children.map((c) => (typeof c === 'string' ? c : '')).join('')
+        : '';
+    return <Tag id={slugify(text)} {...props}>{children}</Tag>;
+  };
+}
+
+function PreWithCopy({ node, children, ...props }) {
+  const [copied, setCopied] = useState(false);
+  function handleCopy() {
+    let text = '';
+    try {
+      const codeNode = node?.children?.find(
+        (c) => c.type === 'element' && c.tagName === 'code'
+      );
+      text = (codeNode?.children ?? [])
+        .map((c) => (c.type === 'text' ? c.value : (c.children ?? []).map((cc) => cc.value ?? '').join('')))
+        .join('');
+    } catch (_) {}
+    navigator.clipboard.writeText(text).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    });
+  }
+  return (
+    <div className="code-copy-wrapper">
+      <pre {...props}>{children}</pre>
+      <button
+        className={`code-copy-btn${copied ? ' copied' : ''}`}
+        onClick={handleCopy}
+        aria-label="Copy code"
+      >
+        {copied ? 'Copied!' : 'Copy'}
+      </button>
+    </div>
+  );
+}
+
+const CALLOUT_TYPES = {
+  note:      { icon: 'ℹ', label: 'Note' },
+  info:      { icon: 'ℹ', label: 'Info' },
+  tip:       { icon: '💡', label: 'Tip' },
+  warning:   { icon: '⚠', label: 'Warning' },
+  caution:   { icon: '⚠', label: 'Caution' },
+  danger:    { icon: '⚡', label: 'Danger' },
+  important: { icon: '📌', label: 'Important' },
+  success:   { icon: '✓', label: 'Success' },
+};
+
+function Callout({ node, children, ...props }) {
+  const firstP = node?.children?.find(
+    (c) => c.type === 'element' && c.tagName === 'p'
+  );
+  const firstText = firstP?.children?.[0];
+  if (firstText?.type === 'text') {
+    const match = firstText.value.match(
+      /^\[!(NOTE|INFO|TIP|WARNING|CAUTION|DANGER|IMPORTANT|SUCCESS)\][ \t]*(.*)/i
+    );
+    if (match) {
+      const type = match[1].toLowerCase();
+      const inlineTitle = match[2].trim();
+      const meta = CALLOUT_TYPES[type] ?? { icon: 'ℹ', label: match[1] };
+      const title = inlineTitle || meta.label;
+      const bodyChildren = children ? [...children] : [];
+      return (
+        <div className={`callout callout-${type}`}>
+          <div className="callout-title">
+            <span className="callout-icon" aria-hidden="true">{meta.icon}</span>
+            <span>{title}</span>
+          </div>
+          <div className="callout-body">{bodyChildren}</div>
+        </div>
+      );
+    }
+  }
+  return <blockquote {...props}>{children}</blockquote>;
+}
+
+const markdownComponents = {
+  h1: makeHeading('h1'),
+  h2: makeHeading('h2'),
+  h3: makeHeading('h3'),
+  pre: PreWithCopy,
+  blockquote: Callout,
+};
 
 function getFolder(doc) {
   const path = doc.drivePath ?? '';
@@ -79,9 +180,15 @@ export default function ReviewerPage() {
   if (instructionFileId && instructionContent !== null) {
     return (
       <div className="rv-instruction-page">
-        {instructionTitle && <h1 className="rv-instruction-heading">{instructionTitle}</h1>}
-        <div className="rv-instruction-body">
-          <ReactMarkdown remarkPlugins={[remarkGfm]}>{instructionContent}</ReactMarkdown>
+        <div className="markdown-body">
+          {instructionTitle && <h1>{instructionTitle}</h1>}
+          <ReactMarkdown
+            remarkPlugins={[remarkGfm]}
+            rehypePlugins={[rehypeCollapsibleHeadings]}
+            components={markdownComponents}
+          >
+            {instructionContent}
+          </ReactMarkdown>
         </div>
       </div>
     );
