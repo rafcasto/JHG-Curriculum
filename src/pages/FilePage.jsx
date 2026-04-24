@@ -184,6 +184,8 @@ export default function FilePage() {
 
   // Scroll container ref for the TOC intersection observer
   const scrollRef = useRef(null);
+  // Flag: navigate to /reviewer after post-survey submission (set when Complete is clicked)
+  const pendingNavAfterSurveyRef = useRef(false);
 
   // Edit lock — real-time state of who currently holds edit access on this file
   const [lockInfo, setLockInfo] = useState(null);
@@ -271,6 +273,11 @@ export default function FilePage() {
     setSubmission(null);
     setSubmissionChecked(false);
     setHasPreQuestions(null);
+    setReviewStartTime(null);
+    setElapsedSeconds(0);
+    setFrozenDuration(null);
+    setShowPreSurveyModal(false);
+    setShowPostSurveyModal(false);
     fetchDocument(id)
       .then((data) => {
         if (!data) {
@@ -401,6 +408,10 @@ export default function FilePage() {
     setSubmission(updatedSub);
     setShowPostSurveyModal(false);
     onReviewSubmissionUpdated?.(id, updatedSub);
+    if (pendingNavAfterSurveyRef.current) {
+      pendingNavAfterSurveyRef.current = false;
+      navigate('/reviewer');
+    }
   }
 
   // Derived reviewer flags (computed after all hooks)
@@ -416,6 +427,37 @@ export default function FilePage() {
     const lockedIds = getLockedDocumentIds(ordered, reviewSubmissions);
     return lockedIds.has(id);
   }, [role, currentWorkspace, reviewDocs, reviewSubmissions, id]);
+
+  // Reviewer document navigation
+  const orderedDocs = useMemo(
+    () => (role === 'reviewer' ? getOrderedDocuments(reviewDocs) : []),
+    [role, reviewDocs]
+  );
+  const currentDocIndex = orderedDocs.findIndex((d) => d.driveFileId === id);
+  const prevDoc = currentDocIndex > 0 ? orderedDocs[currentDocIndex - 1] : null;
+  const nextDoc =
+    currentDocIndex > -1 && currentDocIndex < orderedDocs.length - 1
+      ? orderedDocs[currentDocIndex + 1]
+      : null;
+  const isLastDoc = currentDocIndex > -1 && currentDocIndex === orderedDocs.length - 1;
+
+  function handlePrev() {
+    if (prevDoc) navigate(`/file/${prevDoc.driveFileId}`);
+  }
+
+  function handleContinue() {
+    if (isLastDoc) {
+      if (isReviewComplete) {
+        navigate('/reviewer');
+      } else if (isReviewing) {
+        pendingNavAfterSurveyRef.current = true;
+        handleStopReview();
+      }
+      // isUnreviewed on last doc: button is disabled
+    } else if (nextDoc) {
+      navigate(`/file/${nextDoc.driveFileId}`);
+    }
+  }
 
   if (loading) {
     return (
@@ -565,25 +607,13 @@ export default function FilePage() {
           </button>
         )}
 
-        {/* Reviewer: timer + stop while actively reviewing */}
-        {isReviewing && (
-          <div className="reviewer-controls">
-            <span className="reviewer-timer" title="Time spent reviewing">
-              {formatTime(elapsedSeconds)}
-            </span>
-            <button className="reviewer-stop-btn" onClick={handleStopReview}>
-              ■ Stop
-            </button>
-          </div>
-        )}
-
         {/* Reviewer: badge when review is complete */}
         {isReviewComplete && (
           <span className="reviewer-done-badge">&#10003; Reviewed</span>
         )}
 
-        {/* Graph toggle — hidden during active reviewer sessions */}
-        {!isReviewing && !isReviewComplete && (
+        {/* Graph toggle — hidden for reviewers */}
+        {role !== 'reviewer' && (
           <button
             className={`graph-toggle-btn${showGraph ? ' active' : ''}`}
             onClick={handleToggleGraph}
@@ -689,6 +719,47 @@ export default function FilePage() {
           )}
         </div>
       </div>
+
+      {/* Reviewer prev / continue navigation bar */}
+      {role === 'reviewer' && !isLocked && orderedDocs.length > 0 && (
+        <div className="fp-reviewer-nav">
+          <button
+            className="fp-nav-btn fp-nav-btn--prev"
+            onClick={handlePrev}
+            disabled={!prevDoc}
+          >
+            ← Previous
+          </button>
+          {currentDocIndex > -1 && (
+            <span className="fp-nav-position">
+              {currentDocIndex + 1} / {orderedDocs.length}
+            </span>
+          )}
+          {isLastDoc ? (
+            isReviewComplete ? (
+              <button
+                className="fp-nav-btn fp-nav-btn--done"
+                onClick={() => navigate('/reviewer')}
+              >
+                Back to overview
+              </button>
+            ) : (
+              <button
+                className="fp-nav-btn fp-nav-btn--complete"
+                onClick={handleContinue}
+                disabled={isUnreviewed}
+                title={isUnreviewed ? 'Start the review first' : undefined}
+              >
+                Complete ✓
+              </button>
+            )
+          ) : (
+            <button className="fp-nav-btn fp-nav-btn--continue" onClick={handleContinue}>
+              Continue →
+            </button>
+          )}
+        </div>
+      )}
     </div>
   );
 }

@@ -475,15 +475,17 @@ export default function EarlyAccessManager({ getToken }) {
           </p>
         </div>
         <div className="ea-sequential-row">
-          <label className="ea-sequential-label">
-            <input
-              type="checkbox"
-              className="ea-sequential-checkbox"
-              checked={enforceSequential}
+          <label className="ea-toggle-label">
+            <button
+              role="switch"
+              aria-checked={enforceSequential}
+              className={`ea-toggle${enforceSequential ? ' ea-toggle--on' : ''}${savingSequential ? ' ea-toggle--saving' : ''}`}
+              onClick={() => !savingSequential && handleSaveSequential(!enforceSequential)}
               disabled={savingSequential}
-              onChange={(e) => handleSaveSequential(e.target.checked)}
-            />
-            <span>Enforce sequential review order</span>
+            >
+              <span className="ea-toggle-thumb" />
+            </button>
+            <span className="ea-toggle-text">Enforce sequential review order</span>
           </label>
           {savingSequential && <span className="ea-sequential-saving">Saving…</span>}
           {!savingSequential && (

@@ -136,6 +136,16 @@ export default function ReviewerPage() {
     return getLockedDocumentIds(ordered, reviewSubmissions);
   }, [enforceSequential, reviewDocs, reviewSubmissions]);
 
+  function handleContinue() {
+    const ordered = getOrderedDocuments(reviewDocs);
+    if (ordered.length === 0) return;
+    const target =
+      ordered.find((d) => !lockedIds.has(d.driveFileId) && reviewSubmissions[d.driveFileId]?.status !== 'complete') ||
+      ordered.find((d) => !lockedIds.has(d.driveFileId)) ||
+      ordered[0];
+    navigate(`/file/${target.driveFileId}`);
+  }
+
   // Instruction file
   const instructionFileId = currentWorkspace?.instructionFileId ?? null;
   const [instructionContent, setInstructionContent] = useState(null);
@@ -205,6 +215,13 @@ export default function ReviewerPage() {
             {splitFrontmatter(instructionContent).body}
           </ReactMarkdown>
         </div>
+        {reviewDocs.length > 0 && (
+          <div className="rv-continue-bar">
+            <button className="rv-continue-btn" onClick={handleContinue}>
+              Continue →
+            </button>
+          </div>
+        )}
       </div>
     );
   }
@@ -248,6 +265,15 @@ export default function ReviewerPage() {
           </ul>
         </section>
       ))}
+      <div className="rv-continue-bar">
+        <button
+          className="rv-continue-btn"
+          onClick={handleContinue}
+          disabled={reviewDocs.length === 0}
+        >
+          Continue →
+        </button>
+      </div>
     </div>
   );
 }

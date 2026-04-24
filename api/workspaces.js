@@ -166,6 +166,9 @@ export default async function handler(req, res) {
       if ('instructionFileId' in (req.body ?? {})) {
         updates.instructionFileId = req.body.instructionFileId ?? null;
       }
+      if ('enforceSequentialReview' in (req.body ?? {})) {
+        updates.enforceSequentialReview = req.body.enforceSequentialReview === true;
+      }
       if ('inheritGlobalCatalog' in (req.body ?? {})) {
         updates.inheritGlobalCatalog = req.body.inheritGlobalCatalog !== false;
       }

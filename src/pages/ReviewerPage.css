@@ -106,6 +106,36 @@
   font-size: 0.85rem;
 }
 
+/* ── Continue bar ─────────────────────────────────────────────────────────── */
+.rv-continue-bar {
+  display: flex;
+  justify-content: flex-end;
+  padding: 1.5rem 0 0.5rem;
+  border-top: 1px solid var(--border-subtle);
+  margin-top: 2rem;
+}
+
+.rv-continue-btn {
+  padding: 0.625rem 1.75rem;
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  font-size: 0.9375rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: opacity 0.12s;
+}
+
+.rv-continue-btn:hover:not(:disabled) {
+  opacity: 0.85;
+}
+
+.rv-continue-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
 /* ── Welcome state ───────────────────────────────────────────────────────── */
 .rv-welcome {
   flex: 1;
