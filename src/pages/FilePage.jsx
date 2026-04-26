@@ -716,7 +716,7 @@ export default function FilePage() {
                   </ReactMarkdown>
                 </div>
               </div>
-              {!isUnreviewed && <TableOfContents content={splitFrontmatter(content).body} scrollRef={scrollRef} />}
+              {!isUnreviewed && <TableOfContents content={preprocessMarkdown(splitFrontmatter(content).body)} scrollRef={scrollRef} />}
             </>
           ) : editorMode === 'wysiwyg' ? (
             <RichTextEditor

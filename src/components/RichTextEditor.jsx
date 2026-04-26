@@ -58,6 +58,14 @@ export default function RichTextEditor({ initialContent = '', onChange }) {
   // setOptions() on every keystroke as the prop changed with each edit.
   useEffect(() => {
     if (!editor) return;
+    // Allow data:image/ URLs so base64-embedded images survive markdown parsing.
+    // markdown-it's default validateLink blocks data: URIs.
+    const md = editor.storage?.markdown?.md;
+    if (md) {
+      md.validateLink = (url) =>
+        /^(https?:|ftp:|mailto:|data:image\/|#|\/)/.test(url) ||
+        /^\.?\.?[\/\\]/.test(url);
+    }
     isInitialLoad.current = true;
     editor.commands.setContent(initialContent);
     // eslint-disable-next-line react-hooks/exhaustive-deps
