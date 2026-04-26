@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback, useRef, useMemo } from 'react';
 import { useParams, useNavigate, useOutletContext } from 'react-router-dom';
 import ReactMarkdown from 'react-markdown';
+import MonacoEditor from '@monaco-editor/react';
 import remarkGfm from 'remark-gfm';
 import rehypeCollapsibleHeadings from '../utils/rehypeCollapsibleHeadings';
 import { useAuth } from '../contexts/AuthContext';
@@ -133,6 +134,17 @@ const markdownComponents = {
 
 const STALE_LOCK_MS = 30 * 60 * 1000; // 30 minutes — lock is considered stale after this
 
+/**
+ * Strip Google-Docs-style backslash escapes (e.g. \# → #, \- → -) from
+ * markdown while leaving code fences and inline code untouched.
+ */
+function preprocessMarkdown(body = '') {
+  return body.replace(
+    /(```[\s\S]*?```|`[^`\n]*`)|\\([!"#$%&'()*+,\-./:;<=>?@[\\\]^_`{|}~])/g,
+    (match, code, escaped) => (code !== undefined ? code : escaped)
+  );
+}
+
 /** Split raw file content into the YAML frontmatter block and the markdown body. */
 function splitFrontmatter(raw = '') {
   if (!raw.startsWith('---')) return { frontmatter: '', body: raw };
@@ -159,6 +171,7 @@ export default function FilePage() {
   const [error, setError] = useState(null);
   const [saveError, setSaveError] = useState(null);
   const [mode, setMode] = useState('preview'); // 'preview' | 'edit'
+  const [editorMode, setEditorMode] = useState('wysiwyg'); // 'wysiwyg' | 'raw'
   const [saved, setSaved] = useState(false);
   const [dirty, setDirty] = useState(false);
 
@@ -269,6 +282,7 @@ export default function FilePage() {
     setLoading(true);
     setError(null);
     setMode('preview');
+    setEditorMode('wysiwyg');
     setDirty(false);
     setSubmission(null);
     setSubmissionChecked(false);
@@ -572,6 +586,24 @@ export default function FilePage() {
                 Edit
               </button>
             </div>
+            {mode === 'edit' && (
+              <div className="mode-toggle editor-mode-toggle">
+                <button
+                  className={`mode-btn ${editorMode === 'wysiwyg' ? 'active' : ''}`}
+                  onClick={() => setEditorMode('wysiwyg')}
+                  title="WYSIWYG editor"
+                >
+                  WYSIWYG
+                </button>
+                <button
+                  className={`mode-btn ${editorMode === 'raw' ? 'active' : ''}`}
+                  onClick={() => setEditorMode('raw')}
+                  title="Raw Markdown editor"
+                >
+                  Raw
+                </button>
+              </div>
+            )}
             {lockInfo && user && lockInfo.lockedBy !== user.uid && (
               <span className="lock-notice">
                 🔒 {lockInfo.lockedByEmail || 'Another user'} is editing
@@ -675,16 +707,20 @@ export default function FilePage() {
                     remarkPlugins={[remarkGfm]}
                     rehypePlugins={[rehypeCollapsibleHeadings]}
                     components={markdownComponents}
+                    urlTransform={(url) => {
+                      if (url.startsWith('data:image/')) return url;
+                      return /^(https?:|mailto:|tel:|#|\/)/.test(url) ? url : '';
+                    }}
                   >
-                    {splitFrontmatter(content).body}
+                    {preprocessMarkdown(splitFrontmatter(content).body)}
                   </ReactMarkdown>
                 </div>
               </div>
               {!isUnreviewed && <TableOfContents content={splitFrontmatter(content).body} scrollRef={scrollRef} />}
             </>
-          ) : (
+          ) : editorMode === 'wysiwyg' ? (
             <RichTextEditor
-              key={id}
+              key={`${id}-wysiwyg`}
               initialContent={splitFrontmatter(content).body}
               onChange={(newBody) => {
                 setContent((prev) => {
@@ -693,6 +729,27 @@ export default function FilePage() {
                 });
                 setDirty(true);
               }}
+            />
+          ) : (
+            <MonacoEditor
+              language="markdown"
+              value={splitFrontmatter(content).body}
+              onChange={(val) => {
+                setContent((prev) => {
+                  const { frontmatter } = splitFrontmatter(prev);
+                  return frontmatter ? frontmatter + '\n' + (val ?? '') : (val ?? '');
+                });
+                setDirty(true);
+              }}
+              theme="vs-dark"
+              options={{
+                wordWrap: 'on',
+                minimap: { enabled: false },
+                lineNumbers: 'on',
+                scrollBeyondLastLine: false,
+                fontSize: 14,
+              }}
+              className="monaco-editor-wrapper"
             />
           )}
 

@@ -216,6 +216,17 @@
   color: var(--text-body);
 }
 
+/* Secondary editor-mode toggle (WYSIWYG | Raw) */
+.editor-mode-toggle {
+  margin-left: 0.5rem;
+}
+
+/* ── Monaco raw editor ────────────────────────────────────────────────────── */
+.monaco-editor-wrapper {
+  flex: 1;
+  min-height: 0;
+}
+
 /* ── Save button ──────────────────────────────────────────────────────────── */
 .save-btn {
   background: #238636;

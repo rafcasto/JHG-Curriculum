@@ -107,6 +107,17 @@ function splitFrontmatter(raw = '') {
   return { body: raw.slice(end + 4).replace(/^\n/, '') };
 }
 
+/**
+ * Strip Google-Docs-style backslash escapes (e.g. \# → #, \- → -)
+ * while leaving code fences and inline code untouched.
+ */
+function preprocessMarkdown(body = '') {
+  return body.replace(
+    /(```[\s\S]*?```|`[^`\n]*`)|\\([!"#$%&'()*+,\-./:;<=>?@[\\\]^_`{|}~])/g,
+    (match, code, escaped) => (code !== undefined ? code : escaped)
+  );
+}
+
 const markdownComponents = {
   h1: makeHeading('h1'),
   h2: makeHeading('h2'),
@@ -211,8 +222,12 @@ export default function ReviewerPage() {
             remarkPlugins={[remarkGfm]}
             rehypePlugins={[rehypeCollapsibleHeadings]}
             components={markdownComponents}
+            urlTransform={(url) => {
+              if (url.startsWith('data:image/')) return url;
+              return /^(https?:|mailto:|tel:|#|\/)/.test(url) ? url : '';
+            }}
           >
-            {splitFrontmatter(instructionContent).body}
+            {preprocessMarkdown(splitFrontmatter(instructionContent).body)}
           </ReactMarkdown>
         </div>
         {reviewDocs.length > 0 && (
