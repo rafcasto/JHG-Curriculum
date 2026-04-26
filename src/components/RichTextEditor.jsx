@@ -58,7 +58,7 @@ export default function RichTextEditor({ initialContent = '', onChange }) {
       StarterKit,
       Underline,
       Link.configure({ openOnClick: false, autolink: true }),
-      Image,
+      Image.configure({ allowBase64: true }),
       Table.configure({ resizable: false }),
       TableRow,
       TableCell,
