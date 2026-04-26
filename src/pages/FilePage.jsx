@@ -25,14 +25,18 @@ function slugify(text) {
     .replace(/[^\w-]/g, '');
 }
 
+/** Recursively extract plain text from React node trees (handles bold/italic/nested inline elements). */
+function extractNodeText(node) {
+  if (typeof node === 'string' || typeof node === 'number') return String(node);
+  if (Array.isArray(node)) return node.map(extractNodeText).join('');
+  if (node?.props?.children) return extractNodeText(node.props.children);
+  return '';
+}
+
 /** Custom heading renderers that add id attributes for TOC anchor links. */
 function makeHeading(Tag) {
   return function Heading({ children, ...props }) {
-    const text = typeof children === 'string'
-      ? children
-      : Array.isArray(children)
-        ? children.map((c) => (typeof c === 'string' ? c : '')).join('')
-        : '';
+    const text = extractNodeText(children);
     return <Tag id={slugify(text)} {...props}>{children}</Tag>;
   };
 }

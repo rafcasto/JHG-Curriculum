@@ -22,6 +22,26 @@ function ToolbarBtn({ onClick, active, title, children }) {
 }
 
 /**
+ * Convert reference-style image definitions with data: URLs to inline images
+ * so TipTap's Image extension handles them correctly regardless of markdown-it
+ * URL validation behaviour.
+ *
+ *   Before: ![][image1]  …  [image1]: <data:image/png;base64,…>
+ *   After:  ![](data:image/png;base64,…)
+ */
+function inlineDataImages(markdown) {
+  const refs = {};
+  markdown.replace(/^\[([^\]]+)\]:\s*<(data:image\/[^>]+)>/gim, (_, label, url) => {
+    refs[label.toLowerCase()] = url;
+  });
+  if (Object.keys(refs).length === 0) return markdown;
+  return markdown.replace(/!\[([^\]]*)\]\[([^\]]*)\]/g, (match, alt, refLabel) => {
+    const key = (refLabel || alt).toLowerCase();
+    return refs[key] ? `![${alt}](${refs[key]})` : match;
+  });
+}
+
+/**
  * Rich text editor backed by TipTap + tiptap-markdown.
  *
  * Props:
@@ -67,7 +87,7 @@ export default function RichTextEditor({ initialContent = '', onChange }) {
         /^\.?\.?[\/\\]/.test(url);
     }
     isInitialLoad.current = true;
-    editor.commands.setContent(initialContent);
+    editor.commands.setContent(inlineDataImages(initialContent));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [editor]);
 
