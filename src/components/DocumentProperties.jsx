@@ -4,8 +4,7 @@ import './DocumentProperties.css';
 
 // ── Frontmatter helpers ───────────────────────────────────────────────────────
 
-/** Split raw file content into the YAML frontmatter block and the markdown body.
- *  Mirrors the same function in FilePage so changes stay in sync. */
+/** Split raw file content into the YAML frontmatter block and the markdown body. */
 function splitFrontmatter(raw = '') {
   if (!raw.startsWith('---')) return { frontmatter: '', body: raw };
   const end = raw.indexOf('\n---', 4);
@@ -16,96 +15,122 @@ function splitFrontmatter(raw = '') {
   };
 }
 
-/** Parse the tags array from a frontmatter block string.
- *  Handles the standard multi-line YAML list format used in this codebase. */
-function parseTagsFromFrontmatter(frontmatter) {
-  if (!frontmatter) return [];
-  // frontmatter is "---\n…\n---"; inner content is between the delimiters
-  const inner = frontmatter.slice(4, -4);
-  const tags = [];
-  const tagsBlock = inner.match(/^tags:\n((?:[ \t]+-[ \t]+.+\n?)*)/m);
-  if (tagsBlock) {
-    for (const line of tagsBlock[1].split('\n')) {
+/** Generic: parse a YAML list key from inner frontmatter content.
+ *  Handles both multiline-list and inline-scalar forms. */
+function parseYamlListKey(inner, key) {
+  const values = [];
+  // Multiline list: "key:\n  - X\n  - Y"
+  const listRe = new RegExp(`^${key}:\\n((?:[ \\t]+-[ \\t]+.+\\n?)*)`, 'm');
+  const listMatch = inner.match(listRe);
+  if (listMatch) {
+    for (const line of listMatch[1].split('\n')) {
       const m = line.match(/^\s*-\s+(.+)$/);
-      if (m) tags.push(m[1].trim());
+      if (m) values.push(m[1].trim());
     }
+    return values;
   }
-  return tags;
+  // Inline / scalar: "key: Value"
+  const inlineRe = new RegExp(`^${key}:[ \\t]+(.+)$`, 'm');
+  const inlineMatch = inner.match(inlineRe);
+  if (inlineMatch) values.push(inlineMatch[1].trim());
+  return values;
 }
 
-/** Return a new frontmatter block string with the tags array replaced.
- *  Handles multiline-list, inline-scalar, and missing tags key. */
-function rebuildFrontmatterWithTags(frontmatter, newTags) {
-  const newTagsBlock = newTags.length > 0
-    ? `tags:\n${newTags.map(t => `  - ${t}`).join('\n')}`
+/** Generic: rewrite a YAML list key inside a frontmatter block string. */
+function rebuildFrontmatterKey(frontmatter, key, newValues) {
+  const newBlock = newValues.length > 0
+    ? `${key}:\n${newValues.map(v => `  - ${v}`).join('\n')}`
     : '';
 
   if (!frontmatter) {
-    return newTagsBlock ? `---\n${newTagsBlock}\n---` : '';
+    return newBlock ? `---\n${newBlock}\n---` : '';
   }
 
   const inner = frontmatter.slice(4, -4);
 
-  // Multiline list: "tags:\n  - X\n  - Y\n" — may or may not have trailing newline
-  const multilineRe = /^tags:\n(?:[ \t]+-[ \t]+.+\n?)*/m;
-  // Inline / scalar: "tags: something"
-  const inlineRe = /^tags:[ \t]*.+$/m;
+  // Multiline list match (zero or more items)
+  const multilineRe = new RegExp(`^${key}:\\n(?:[ \\t]+-[ \\t]+.+\\n?)*`, 'm');
+  // Inline / scalar match
+  const inlineRe = new RegExp(`^${key}:[ \\t]*.+$`, 'm');
 
   let newInner;
   if (multilineRe.test(inner)) {
     newInner = inner.replace(multilineRe, (match) => {
-      // Preserve the trailing separator newline so subsequent keys stay separated
       const sep = match.endsWith('\n') ? '\n' : '';
-      return newTagsBlock ? newTagsBlock + sep : '';
+      return newBlock ? newBlock + sep : '';
     });
   } else if (inlineRe.test(inner)) {
-    newInner = inner.replace(inlineRe, newTagsBlock);
-  } else if (newTagsBlock) {
-    newInner = inner ? inner + '\n' + newTagsBlock : newTagsBlock;
+    newInner = inner.replace(inlineRe, newBlock);
+  } else if (newBlock) {
+    newInner = inner ? inner + '\n' + newBlock : newBlock;
   } else {
     newInner = inner;
   }
 
-  // Tidy up: collapse 3+ consecutive newlines, strip leading blank lines
   newInner = newInner.replace(/\n{3,}/g, '\n\n').replace(/^\n+/, '');
   return `---\n${newInner}\n---`;
+}
+
+function parseTagsFromFrontmatter(frontmatter) {
+  if (!frontmatter) return [];
+  return parseYamlListKey(frontmatter.slice(4, -4), 'tags');
+}
+
+function parseCategoriesFromFrontmatter(frontmatter) {
+  if (!frontmatter) return [];
+  return parseYamlListKey(frontmatter.slice(4, -4), 'category');
 }
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
 /**
- * DocumentProperties — collapsible panel for viewing/editing file tags.
+ * DocumentProperties — collapsible panel for viewing/editing file tags and asset types.
  *
  * Props:
  *   content   string   — full raw file content (frontmatter + body)
- *   onChange  fn(str)  — called with updated full content when tags change
- *   readOnly  bool     — if true, tags are shown but not editable
+ *   onChange  fn(str)  — called with updated full content on change
+ *   readOnly  bool     — if true, values are shown but not editable
  */
 export default function DocumentProperties({ content, onChange, readOnly }) {
   const [expanded, setExpanded] = useState(false);
-  const { activeTags } = useWorkspace();
+  const { activeTags, activeAssetTypes } = useWorkspace();
 
   const { frontmatter, body } = useMemo(() => splitFrontmatter(content), [content]);
-  const currentTags = useMemo(() => parseTagsFromFrontmatter(frontmatter), [frontmatter]);
+  const currentTags       = useMemo(() => parseTagsFromFrontmatter(frontmatter),       [frontmatter]);
+  const currentCategories = useMemo(() => parseCategoriesFromFrontmatter(frontmatter), [frontmatter]);
 
+  // ── Tag handlers ────────────────────────────────────────────────────────────
   function handleAddTag(tagValue) {
     if (!tagValue || currentTags.includes(tagValue)) return;
-    const newTags = [...currentTags, tagValue];
-    const newFm = rebuildFrontmatterWithTags(frontmatter, newTags);
+    const newFm = rebuildFrontmatterKey(frontmatter, 'tags', [...currentTags, tagValue]);
     onChange(newFm ? newFm + '\n' + body : body);
   }
 
   function handleRemoveTag(tagValue) {
-    const newTags = currentTags.filter(t => t !== tagValue);
-    const newFm = rebuildFrontmatterWithTags(frontmatter, newTags);
+    const newFm = rebuildFrontmatterKey(frontmatter, 'tags', currentTags.filter(t => t !== tagValue));
     onChange(newFm ? newFm + '\n' + body : body);
   }
 
+  // ── Category handlers ───────────────────────────────────────────────────────
+  function handleAddCategory(value) {
+    if (!value || currentCategories.includes(value)) return;
+    const newFm = rebuildFrontmatterKey(frontmatter, 'category', [...currentCategories, value]);
+    onChange(newFm ? newFm + '\n' + body : body);
+  }
+
+  function handleRemoveCategory(value) {
+    const newFm = rebuildFrontmatterKey(frontmatter, 'category', currentCategories.filter(c => c !== value));
+    onChange(newFm ? newFm + '\n' + body : body);
+  }
+
+  // ── Derived ─────────────────────────────────────────────────────────────────
   function getLabelForTag(value) {
     return activeTags.find(t => t.value === value)?.label ?? value;
   }
 
-  const availableTags = activeTags.filter(t => !currentTags.includes(t.value));
+  const availableTags       = activeTags.filter(t => !currentTags.includes(t.value));
+  const availableCategories = activeAssetTypes.filter(c => !currentCategories.includes(c));
+  const totalCount = currentTags.length + currentCategories.length;
 
   return (
     <div className="doc-props">
@@ -116,15 +141,20 @@ export default function DocumentProperties({ content, onChange, readOnly }) {
       >
         <span className="doc-props-arrow" aria-hidden="true">{expanded ? '▾' : '▸'}</span>
         <span className="doc-props-toggle-title">Document Properties</span>
-        {!expanded && currentTags.length > 0 && (
+        {!expanded && totalCount > 0 && (
           <span className="doc-props-summary" aria-hidden="true">
-            {currentTags.slice(0, 3).map(t => (
-              <span key={t} className="doc-props-chip doc-props-chip--preview">
+            {currentTags.slice(0, 2).map(t => (
+              <span key={t} className="doc-props-chip doc-props-chip--tag doc-props-chip--preview">
                 {getLabelForTag(t)}
               </span>
             ))}
-            {currentTags.length > 3 && (
-              <span className="doc-props-more">+{currentTags.length - 3}</span>
+            {currentCategories.slice(0, 2).map(c => (
+              <span key={c} className="doc-props-chip doc-props-chip--cat doc-props-chip--preview">
+                {c}
+              </span>
+            ))}
+            {totalCount > 4 && (
+              <span className="doc-props-more">+{totalCount - 4}</span>
             )}
           </span>
         )}
@@ -132,11 +162,13 @@ export default function DocumentProperties({ content, onChange, readOnly }) {
 
       {expanded && (
         <div className="doc-props-body">
+
+          {/* Tags row */}
           <div className="doc-props-row">
             <span className="doc-props-label">Tags</span>
             <div className="doc-props-tags">
               {currentTags.map(tag => (
-                <span key={tag} className="doc-props-chip">
+                <span key={tag} className="doc-props-chip doc-props-chip--tag">
                   <span className="doc-props-chip-label">{getLabelForTag(tag)}</span>
                   {!readOnly && (
                     <button
@@ -169,8 +201,49 @@ export default function DocumentProperties({ content, onChange, readOnly }) {
               )}
             </div>
           </div>
+
+          {/* Asset Type row */}
+          <div className="doc-props-row">
+            <span className="doc-props-label">Asset Type</span>
+            <div className="doc-props-tags">
+              {currentCategories.map(cat => (
+                <span key={cat} className="doc-props-chip doc-props-chip--cat">
+                  <span className="doc-props-chip-label">{cat}</span>
+                  {!readOnly && (
+                    <button
+                      className="doc-props-chip-remove"
+                      onClick={() => handleRemoveCategory(cat)}
+                      aria-label={`Remove asset type ${cat}`}
+                    >
+                      ×
+                    </button>
+                  )}
+                </span>
+              ))}
+              {!readOnly && availableCategories.length > 0 && (
+                <select
+                  className="doc-props-add-select"
+                  value=""
+                  onChange={(e) => { if (e.target.value) handleAddCategory(e.target.value); }}
+                  aria-label="Add an asset type"
+                >
+                  <option value="">+ Add type…</option>
+                  {availableCategories.map(c => (
+                    <option key={c} value={c}>{c}</option>
+                  ))}
+                </select>
+              )}
+              {currentCategories.length === 0 && (
+                <span className="doc-props-empty">
+                  {readOnly ? 'No asset type' : 'No asset type — select one above'}
+                </span>
+              )}
+            </div>
+          </div>
+
         </div>
       )}
     </div>
   );
 }
+
