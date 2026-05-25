@@ -1,0 +1,166 @@
+/* ── Shell ───────────────────────────────────────────────────────────────── */
+.doc-props {
+  flex-shrink: 0;
+  border-bottom: 1px solid var(--border-color);
+  background: var(--bg-secondary);
+}
+
+/* ── Toggle row ──────────────────────────────────────────────────────────── */
+.doc-props-toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  width: 100%;
+  padding: 0.45rem 1.25rem;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--text-secondary);
+  font-size: 0.78rem;
+  font-weight: 500;
+  text-align: left;
+  letter-spacing: 0.02em;
+  user-select: none;
+  transition: color 0.12s, background 0.12s;
+}
+
+.doc-props-toggle:hover {
+  color: var(--text-primary);
+  background: color-mix(in srgb, var(--accent) 6%, transparent);
+}
+
+.doc-props-toggle--open {
+  color: var(--text-primary);
+}
+
+.doc-props-arrow {
+  font-size: 0.65rem;
+  flex-shrink: 0;
+  opacity: 0.7;
+}
+
+.doc-props-toggle-title {
+  flex-shrink: 0;
+}
+
+/* Inline chip preview shown when collapsed */
+.doc-props-summary {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  flex-wrap: wrap;
+  margin-left: 0.4rem;
+}
+
+.doc-props-more {
+  font-size: 0.7rem;
+  color: var(--text-muted, var(--text-secondary));
+}
+
+/* ── Expanded body ───────────────────────────────────────────────────────── */
+.doc-props-body {
+  padding: 0.5rem 1.25rem 0.65rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.doc-props-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+}
+
+.doc-props-label {
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+  padding-top: 0.25rem;
+  flex-shrink: 0;
+  min-width: 3.5rem;
+}
+
+/* ── Tags row ────────────────────────────────────────────────────────────── */
+.doc-props-tags {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+/* ── Chips ───────────────────────────────────────────────────────────────── */
+.doc-props-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+  padding: 0.18rem 0.55rem;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 500;
+  background: color-mix(in srgb, var(--color-gold, #e3b341) 14%, transparent);
+  color: var(--color-gold, #e3b341);
+  border: 1px solid color-mix(in srgb, var(--color-gold, #e3b341) 35%, transparent);
+  white-space: nowrap;
+}
+
+/* Compact preview chips (shown in collapsed header) */
+.doc-props-chip--preview {
+  padding: 0.1rem 0.45rem;
+  font-size: 0.68rem;
+  opacity: 0.85;
+}
+
+.doc-props-chip-label {
+  line-height: 1;
+}
+
+.doc-props-chip-remove {
+  background: none;
+  border: none;
+  padding: 0 0.1rem;
+  margin-left: 0.05rem;
+  font-size: 0.85rem;
+  line-height: 1;
+  cursor: pointer;
+  color: inherit;
+  opacity: 0.6;
+  transition: opacity 0.1s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.doc-props-chip-remove:hover {
+  opacity: 1;
+}
+
+/* ── Add tag select ──────────────────────────────────────────────────────── */
+.doc-props-add-select {
+  padding: 0.18rem 0.55rem;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  background: var(--bg-tertiary, var(--bg-secondary));
+  color: var(--text-secondary);
+  border: 1px dashed var(--border-color);
+  cursor: pointer;
+  transition: border-color 0.12s, color 0.12s;
+  appearance: none;
+  -webkit-appearance: none;
+  outline: none;
+}
+
+.doc-props-add-select:hover,
+.doc-props-add-select:focus {
+  border-color: var(--accent);
+  color: var(--text-primary);
+}
+
+/* ── Empty state ─────────────────────────────────────────────────────────── */
+.doc-props-empty {
+  font-size: 0.72rem;
+  color: var(--text-secondary);
+  opacity: 0.6;
+  font-style: italic;
+}

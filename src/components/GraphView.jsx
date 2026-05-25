@@ -90,6 +90,7 @@ export default function GraphView({ graphData, documents, settings: settingsProp
       textPrimary:st.getPropertyValue('--text-primary').trim(),
       accent:     st.getPropertyValue('--accent').trim(),
       gold:       st.getPropertyValue('--color-gold').trim(),
+      customTag:  '#39c5b0',  // teal — custom (non-Module/*) tag hub nodes
       dotFill:    theme === 'light' ? 'rgba(0,0,0,0.06)' : 'rgba(255,255,255,0.07)',
       tagNodeFill:theme === 'light' ? 'rgba(0,0,0,0.05)' : 'rgba(255,255,255,0.08)',
     };
@@ -346,7 +347,7 @@ export default function GraphView({ graphData, documents, settings: settingsProp
       .attr('class', 'node-circle')
       .attr('r', (n) => nodeRadius(n.id))
       .attr('fill', (n) => n.isTagNode ? C.tagNodeFill : getNodeColor(n, settings.colorBy, moduleColors))
-      .attr('stroke', (n) => n.isTagNode ? C.gold : (n.id === localMode?.centerNodeId ? C.textPrimary : C.bg))
+      .attr('stroke', (n) => n.isTagNode ? (n.tagKind === 'custom' ? C.customTag : C.gold) : (n.id === localMode?.centerNodeId ? C.textPrimary : C.bg))
       .attr('stroke-width', (n) => n.isTagNode ? 1.5 : (n.id === localMode?.centerNodeId ? 2.5 : 1.5))
       .attr('stroke-dasharray', (n) => n.isTagNode ? '3 2' : null)
       .attr('opacity', (n) => matchesSearch(n) ? 1 : 0.12);
@@ -361,7 +362,7 @@ export default function GraphView({ graphData, documents, settings: settingsProp
       .attr('text-anchor', 'middle')
       .attr('font-size', (n) => n.isTagNode ? '8px' : '9px')
       .attr('font-family', 'Inter, system-ui, sans-serif')
-      .attr('fill', (n) => n.isTagNode ? C.gold : C.textBody)
+      .attr('fill', (n) => n.isTagNode ? (n.tagKind === 'custom' ? C.customTag : C.gold) : C.textBody)
       .attr('opacity', (n) => n.isTagNode ? 1 : (matchesSearch(n) ? labelOpacityInit : 0))
       .attr('pointer-events', 'none')
       .text((n) => {
@@ -394,7 +395,7 @@ export default function GraphView({ graphData, documents, settings: settingsProp
           return n.id === localMode?.centerNodeId ? 2.5 : 1.5;
         })
         .attr('stroke', (n) => {
-          if (n.isTagNode) return C.gold;
+          if (n.isTagNode) return n.tagKind === 'custom' ? C.customTag : C.gold;
           if (query && matchesSearch(n)) return C.gold;
           return n.id === localMode?.centerNodeId ? C.textPrimary : C.bg;
         });

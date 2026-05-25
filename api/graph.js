@@ -64,12 +64,13 @@ function extractWikiLinks(content) {
 
 /**
  * Parse YAML frontmatter and return:
- *   moduleTags  — all "Module/X-Name" tags  (used for graph linkages)
+ *   allTags     — every tag value (used for graph linkages)
  *   categories  — all "category" values       (used for UI filtering)
  *
  * Handles scalar and list YAML values:
  *   tags:
  *     - Module/1-Goal
+ *     - Custom/MyTag
  *   category: Lesson/Text
  *   category:
  *     - Homework/1-Exercise-Instructions
@@ -77,17 +78,17 @@ function extractWikiLinks(content) {
  */
 function extractFrontmatterData(content) {
   const fmMatch = content.match(/^---\n([\s\S]*?)\n---/);
-  if (!fmMatch) return { moduleTags: [], categories: [] };
+  if (!fmMatch) return { allTags: [], categories: [] };
 
   const fm = fmMatch[1];
 
-  // Extract Module/* tags
-  const moduleTags = [];
+  // Extract all tags (any value)
+  const allTags = [];
   const tagsBlock = fm.match(/^tags:\n((?:[ \t]+-[ \t]+.+\n?)*)/m);
   if (tagsBlock) {
     for (const line of tagsBlock[1].split('\n')) {
       const m = line.match(/^\s*-\s+(.+)$/);
-      if (m && m[1].trim().startsWith('Module/')) moduleTags.push(m[1].trim());
+      if (m) allTags.push(m[1].trim());
     }
   }
 
@@ -104,7 +105,7 @@ function extractFrontmatterData(content) {
     if (catInline) categories.push(catInline[1].trim());
   }
 
-  return { moduleTags, categories };
+  return { allTags, categories };
 }
 
 /** List direct children of a folder (handles pagination + Shared Drives) */
@@ -182,13 +183,13 @@ async function buildGraph(folderId) {
 
   // Build nodes + extract frontmatter data per node
   const nodes = [];
-  const nodeModuleTags = new Map(); // id → string[]  (Module/* tags only)
+  const nodeAllTags = new Map(); // id → string[]  (all tags)
   const nodeWikiLinks  = new Map(); // id → string[]  (raw [[titles]])
 
   for (const f of files) {
     const title = f.name.replace(/\.md$/i, '');
     const content = contentMap.get(f.id) ?? '';
-    const { moduleTags, categories } = extractFrontmatterData(content);
+    const { allTags, categories } = extractFrontmatterData(content);
     const wikiLinks = extractWikiLinks(content);
 
     nodes.push({
@@ -198,10 +199,10 @@ async function buildGraph(folderId) {
       type: inferType(title, f.path),
       module: inferModule(f.path),
       categories,          // e.g. ["Lesson/Text"] or ["Homework/3-AI-Prompt"]
-      tags: moduleTags.map((t) => t.replace(/^Module\//, '')), // e.g. ["1-Focus", "3-Profile"]
+      tags: allTags.map((t) => t.startsWith('Module/') ? t.replace('Module/', '') : t),
     });
 
-    nodeModuleTags.set(f.id, moduleTags);
+    nodeAllTags.set(f.id, allTags);
     nodeWikiLinks.set(f.id, wikiLinks);
   }
 
@@ -228,27 +229,29 @@ async function buildGraph(folderId) {
     }
   }
 
-  // ── Module-tag hub nodes + edges ──────────────────────────────────────────
-  // Each unique Module/* tag becomes a central hub node; files connect to it
-  // instead of pairwise, giving an Obsidian-style tag cluster.
-  const moduleIndex = new Map(); // "Module/1-Goal" → Set<nodeId>
-  for (const [id, tags] of nodeModuleTags) {
+  // ── Tag hub nodes + edges ─────────────────────────────────────────────────
+  // Every unique tag (Module/* or custom) becomes a central hub node; files
+  // connect to it giving an Obsidian-style tag cluster.
+  const tagIndex = new Map(); // tagValue → Set<nodeId>
+  for (const [id, tags] of nodeAllTags) {
     for (const tag of tags) {
-      if (!moduleIndex.has(tag)) moduleIndex.set(tag, new Set());
-      moduleIndex.get(tag).add(id);
+      if (!tagIndex.has(tag)) tagIndex.set(tag, new Set());
+      tagIndex.get(tag).add(id);
     }
   }
 
-  for (const [tag, ids] of moduleIndex) {
+  for (const [tag, ids] of tagIndex) {
+    const isModuleTag = tag.startsWith('Module/');
     const tagNodeId = `tag:${tag}`;
     nodes.push({
       id: tagNodeId,
-      title: tag.replace('Module/', ''),
+      title: isModuleTag ? tag.replace('Module/', '') : tag,
       path: '',
       type: 'tag',
       module: inferModuleFromTag(tag),
       categories: [],
       isTagNode: true,
+      tagKind: isModuleTag ? 'module' : 'custom',
     });
     for (const fileId of ids) {
       const key = fileId < tagNodeId ? `${fileId}→${tagNodeId}` : `${tagNodeId}→${fileId}`;

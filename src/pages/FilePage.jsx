@@ -10,6 +10,7 @@ import { fetchDocument, saveDocument, deleteDocument } from '../hooks/useDocumen
 import { getOrderedDocuments, getLockedDocumentIds } from '../utils/reviewOrder';
 import RichTextEditor from '../components/RichTextEditor';
 import GraphView, { DEFAULT_SETTINGS } from '../components/GraphView';
+import DocumentProperties from '../components/DocumentProperties';
 import TableOfContents from '../components/TableOfContents';
 import PreSurveyModal from '../components/PreSurveyModal';
 import PostSurveyModal from '../components/PostSurveyModal';
@@ -698,6 +699,15 @@ export default function FilePage() {
             ) : null}
           </div>
         </div>
+      )}
+
+      {/* Document properties (tags) — visible to editors in all modes */}
+      {canEdit && doc && (
+        <DocumentProperties
+          content={content}
+          onChange={(newContent) => { setContent(newContent); setDirty(true); }}
+          readOnly={readOnly || mode !== 'edit'}
+        />
       )}
 
       {/* Content area */}
