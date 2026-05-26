@@ -311,30 +311,42 @@ export default function FilePage() {
       .finally(() => setLoading(false));
   }, [id]);
 
-  // For reviewer: check for an existing submission + whether pre-questions are active
+  // For reviewer/learner: check for an existing submission
   useEffect(() => {
-    if (role !== 'reviewer' || !id || !user) return;
+    if ((role !== 'reviewer' && role !== 'learner') || !id || !user) return;
     let cancelled = false;
     async function checkSubmission() {
       try {
         const token = await user.getIdToken();
-        const [subRes, preQRes] = await Promise.all([
-          fetch(`/api/submissions?documentId=${encodeURIComponent(id)}`, {
+        if (role === 'learner') {
+          // Learners have no pre-survey — just load existing submission status
+          const subRes = await fetch(`/api/submissions?documentId=${encodeURIComponent(id)}`, {
             headers: { Authorization: `Bearer ${token}` },
-          }),
-          fetch('/api/questions?touchpoint=pre&activeOnly=true' + (workspaceId ? `&workspaceId=${encodeURIComponent(workspaceId)}` : ''), {
-            headers: { Authorization: `Bearer ${token}` },
-          }),
-        ]);
-        if (subRes.ok) {
-          const data = await subRes.json();
-          if (!cancelled) setSubmission(data);
-        }
-        if (preQRes.ok) {
-          const preQs = await preQRes.json();
-          if (!cancelled) setHasPreQuestions(preQs.length > 0);
-        } else {
+          });
+          if (subRes.ok) {
+            const data = await subRes.json();
+            if (!cancelled) setSubmission(data);
+          }
           if (!cancelled) setHasPreQuestions(false);
+        } else {
+          const [subRes, preQRes] = await Promise.all([
+            fetch(`/api/submissions?documentId=${encodeURIComponent(id)}`, {
+              headers: { Authorization: `Bearer ${token}` },
+            }),
+            fetch('/api/questions?touchpoint=pre&activeOnly=true' + (workspaceId ? `&workspaceId=${encodeURIComponent(workspaceId)}` : ''), {
+              headers: { Authorization: `Bearer ${token}` },
+            }),
+          ]);
+          if (subRes.ok) {
+            const data = await subRes.json();
+            if (!cancelled) setSubmission(data);
+          }
+          if (preQRes.ok) {
+            const preQs = await preQRes.json();
+            if (!cancelled) setHasPreQuestions(preQs.length > 0);
+          } else {
+            if (!cancelled) setHasPreQuestions(false);
+          }
         }
       } catch {
         // no existing submission is fine
@@ -345,7 +357,7 @@ export default function FilePage() {
     }
     checkSubmission();
     return () => { cancelled = true; };
-  }, [role, id, user]);
+  }, [role, id, user, workspaceId]);
 
   const handleSave = useCallback(async () => {
     if (!doc || saving) return;
@@ -442,16 +454,16 @@ export default function FilePage() {
 
   // Sequential review: is this document locked?
   const isLocked = useMemo(() => {
-    if (role !== 'reviewer') return false;
+    if (role !== 'reviewer' && role !== 'learner') return false;
     if (!currentWorkspace?.enforceSequentialReview) return false;
     const ordered = getOrderedDocuments(reviewDocs);
     const lockedIds = getLockedDocumentIds(ordered, reviewSubmissions);
     return lockedIds.has(id);
   }, [role, currentWorkspace, reviewDocs, reviewSubmissions, id]);
 
-  // Reviewer document navigation
+  // Reviewer/learner document navigation
   const orderedDocs = useMemo(
-    () => (role === 'reviewer' ? getOrderedDocuments(reviewDocs) : []),
+    () => (role === 'reviewer' || role === 'learner' ? getOrderedDocuments(reviewDocs) : []),
     [role, reviewDocs]
   );
   const currentDocIndex = orderedDocs.findIndex((d) => d.driveFileId === id);
@@ -466,12 +478,58 @@ export default function FilePage() {
     if (prevDoc) navigate(`/file/${prevDoc.driveFileId}`);
   }
 
+  // Learner: silently create + immediately complete a submission, then navigate.
+  async function handleLearnerComplete(nextPath) {
+    try {
+      const token = await user.getIdToken();
+      let sub = submission;
+      // Create draft if no submission exists yet
+      if (!sub) {
+        const res = await fetch('/api/submissions', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+          body: JSON.stringify({ documentId: id }),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error ?? 'Failed to create submission');
+        sub = data;
+        setSubmission(sub);
+        onReviewSubmissionUpdated?.(id, sub);
+      }
+      // Complete the submission immediately with empty responses
+      if (sub?.status !== 'complete') {
+        const submissionId = sub?.submissionId ?? sub?.id ?? `${user.uid}_${id}`;
+        const patchRes = await fetch(`/api/submissions?id=${encodeURIComponent(submissionId)}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+          body: JSON.stringify({ responses: {} }),
+        });
+        const patched = await patchRes.json();
+        if (patchRes.ok) {
+          const updated = { ...sub, status: 'complete', ...patched };
+          setSubmission(updated);
+          onReviewSubmissionUpdated?.(id, updated);
+        }
+      }
+    } catch (e) {
+      console.error('[learner complete]', e.message);
+    } finally {
+      navigate(nextPath);
+    }
+  }
+
   function handleContinue() {
+    if (role === 'learner') {
+      const nextPath = isLastDoc ? '/review' : (nextDoc ? `/file/${nextDoc.driveFileId}` : null);
+      if (!nextPath) return;
+      handleLearnerComplete(nextPath);
+      return;
+    }
     if (isLastDoc) {
       if (isReviewComplete) {
-        navigate('/reviewer');
+        navigate('/review');
       } else if (isReviewing) {
-        pendingNavAfterSurveyRef.current = '/reviewer';
+        pendingNavAfterSurveyRef.current = '/review';
         handleStopReview();
       }
       // isUnreviewed on last doc: button is disabled
@@ -659,8 +717,8 @@ export default function FilePage() {
           <span className="reviewer-done-badge">&#10003; Reviewed</span>
         )}
 
-        {/* Graph toggle — hidden for reviewers */}
-        {role !== 'reviewer' && (
+        {/* Graph toggle — hidden for reviewers and learners */}
+        {role !== 'reviewer' && role !== 'learner' && (
           <button
             className={`graph-toggle-btn${showGraph ? ' active' : ''}`}
             onClick={handleToggleGraph}
@@ -801,8 +859,8 @@ export default function FilePage() {
         </div>
       </div>
 
-      {/* Reviewer prev / continue navigation bar */}
-      {role === 'reviewer' && !isLocked && orderedDocs.length > 0 && (
+      {/* Reviewer / learner prev / continue navigation bar */}
+      {(role === 'reviewer' || role === 'learner') && !isLocked && orderedDocs.length > 0 && (
         <div className="fp-reviewer-nav">
           <button
             className="fp-nav-btn fp-nav-btn--prev"
@@ -820,7 +878,7 @@ export default function FilePage() {
             isReviewComplete ? (
               <button
                 className="fp-nav-btn fp-nav-btn--done"
-                onClick={() => navigate('/reviewer')}
+                onClick={() => navigate('/review')}
               >
                 Back to overview
               </button>
@@ -838,7 +896,7 @@ export default function FilePage() {
             <button
               className="fp-nav-btn fp-nav-btn--continue"
               onClick={handleContinue}
-              disabled={isUnreviewed || !submissionChecked}
+              disabled={isUnreviewed || (role === 'reviewer' && !submissionChecked)}
               title={isUnreviewed ? 'Start the review first' : undefined}
             >
               Continue →

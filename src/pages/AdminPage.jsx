@@ -7,7 +7,7 @@ import EarlyAccessManager from '../components/EarlyAccessManager';
 import FeedbackDashboard from '../components/FeedbackDashboard';
 import './AdminPage.css';
 
-const ROLES = ['admin', 'editor', 'viewer', 'reviewer'];
+const ROLES = ['admin', 'editor', 'viewer', 'reviewer', 'learner'];
 
 // ── Workspace Management Section ────────────────────────────────────────────
 function WorkspacesSection({ users, getToken }) {

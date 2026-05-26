@@ -11,19 +11,19 @@ import AdminPage from './pages/AdminPage';
 import ReviewerPage from './pages/ReviewerPage';
 import AdminRoute from './components/AdminRoute';
 
-/** Redirects to /review for reviewers, /graph for everyone else. */
+/** Redirects to /review for reviewers and learners, /graph for everyone else. */
 function RoleRedirect() {
   const { role, loading } = useAuth();
   if (loading) return null;
-  if (role === 'reviewer') return <Navigate to="/review" replace />;
+  if (role === 'reviewer' || role === 'learner') return <Navigate to="/review" replace />;
   return <Navigate to="/graph" replace />;
 }
 
-/** Blocks reviewers from accessing a route — redirects them to /review. */
+/** Blocks reviewers and learners from accessing a route — redirects them to /review. */
 function ReviewerBlock({ children }) {
   const { role, loading } = useAuth();
   if (loading) return null;
-  if (role === 'reviewer') return <Navigate to="/review" replace />;
+  if (role === 'reviewer' || role === 'learner') return <Navigate to="/review" replace />;
   return children;
 }
 

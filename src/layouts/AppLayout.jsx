@@ -13,7 +13,7 @@ import './AppLayout.css';
 export default function AppLayout() {
   const { currentWorkspace } = useWorkspace();
   const { role, user } = useAuth();
-  const isReviewer = role === 'reviewer';
+  const isReviewer = role === 'reviewer' || role === 'learner';
 
   // ── Editor / Admin: Drive documents ────────────────────────────────────
   const [documents, setDocuments] = useState([]);
