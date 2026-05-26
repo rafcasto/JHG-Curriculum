@@ -35,7 +35,7 @@ export default function Navbar() {
     navigate(role === 'reviewer' || role === 'learner' ? '/review' : '/graph');
   }
 
-  const workspaceLabel = currentWorkspace?.name ?? 'JHG Academy';
+  const workspaceLabel = currentWorkspace?.name ?? 'AI Academy';
   const multiWorkspace = workspaces.length > 1;
 
   return (

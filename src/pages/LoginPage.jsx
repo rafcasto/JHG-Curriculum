@@ -36,7 +36,7 @@ export default function LoginPage() {
       <div className="login-card">
         <div className="login-logo">
           <span className="logo-icon">⬡</span>
-          <h1>JHG Academy</h1>
+          <h1>AI Academy</h1>
           <p>Knowledge Graph Platform</p>
         </div>
 
