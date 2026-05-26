@@ -184,6 +184,13 @@ export default async function handler(req, res) {
         }
         updates.assetTypes = req.body.assetTypes;
       }
+      if ('linkedInUrl' in (req.body ?? {})) {
+        const val = req.body.linkedInUrl;
+        if (val !== null && typeof val !== 'string') {
+          return res.status(400).json({ error: 'linkedInUrl must be a string or null' });
+        }
+        updates.linkedInUrl = val ?? null;
+      }
       if (addUser) updates.userIds = FieldValue.arrayUnion(addUser);
       if (removeUser) updates.userIds = FieldValue.arrayRemove(removeUser);
 

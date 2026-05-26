@@ -3,21 +3,28 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useWorkspace } from '../contexts/WorkspaceContext';
 import { useTheme } from '../contexts/ThemeContext';
+import { useUserProfile } from '../contexts/UserProfileContext';
 import './Navbar.css';
 
 export default function Navbar() {
   const { user, role, signOut } = useAuth();
   const { workspaces, currentWorkspace, setCurrentWorkspace } = useWorkspace();
   const { theme, toggleTheme } = useTheme();
+  const { profile } = useUserProfile();
   const navigate = useNavigate();
   const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [profileMenuOpen, setProfileMenuOpen] = useState(false);
   const dropdownRef = useRef(null);
+  const profileMenuRef = useRef(null);
 
-  // Close dropdown when clicking outside
+  // Close dropdowns when clicking outside
   useEffect(() => {
     function handleClickOutside(e) {
       if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
         setDropdownOpen(false);
+      }
+      if (profileMenuRef.current && !profileMenuRef.current.contains(e.target)) {
+        setProfileMenuOpen(false);
       }
     }
     document.addEventListener('mousedown', handleClickOutside);
@@ -25,6 +32,7 @@ export default function Navbar() {
   }, []);
 
   async function handleSignOut() {
+    setProfileMenuOpen(false);
     await signOut();
     navigate('/login', { replace: true });
   }
@@ -37,6 +45,16 @@ export default function Navbar() {
 
   const workspaceLabel = currentWorkspace?.name ?? 'AI Academy';
   const multiWorkspace = workspaces.length > 1;
+
+  const initials = profile?.firstName && profile?.lastName
+    ? `${profile.firstName[0]}${profile.lastName[0]}`.toUpperCase()
+    : (user?.email?.[0] ?? '?').toUpperCase();
+
+  const displayName = profile?.firstName
+    ? `${profile.firstName} ${profile.lastName ?? ''}`.trim()
+    : user?.email ?? '';
+
+  const roleName = { admin: 'Admin', editor: 'Editor', reviewer: 'Reviewer', learner: 'Learner', viewer: 'Viewer' }[role] ?? 'User';
 
   return (
     <header className="navbar">
@@ -82,21 +100,6 @@ export default function Navbar() {
             Users
           </button>
         )}
-        {role === 'reviewer' && (
-          <button className="navbar-users-link" onClick={() => navigate('/review')}>
-            My Documents
-          </button>
-        )}
-        {role === 'learner' && (
-          <button className="navbar-users-link" onClick={() => navigate('/review')}>
-            My Documents
-          </button>
-        )}
-        {role === 'admin' && <span className="role-badge">Admin</span>}
-        {role === 'editor' && <span className="role-badge role-badge--editor">Editor</span>}
-        {role === 'reviewer' && <span className="role-badge role-badge--reviewer">Reviewer</span>}
-        {role === 'learner' && <span className="role-badge role-badge--learner">Learner</span>}
-        <span className="navbar-email">{user?.email}</span>
         <button
           className="theme-toggle-btn"
           onClick={toggleTheme}
@@ -105,9 +108,60 @@ export default function Navbar() {
         >
           {theme === 'dark' ? '☀️' : '🌙'}
         </button>
-        <button className="signout-btn" onClick={handleSignOut}>
-          Sign out
-        </button>
+
+        {/* Profile avatar + dropdown */}
+        <div className="profile-menu-wrap" ref={profileMenuRef}>
+          <button
+            className="profile-avatar-btn"
+            onClick={() => setProfileMenuOpen((o) => !o)}
+            aria-haspopup="true"
+            aria-expanded={profileMenuOpen}
+            title="Account"
+          >
+            {profile?.photoURL ? (
+              <img src={profile.photoURL} alt={displayName} className="profile-avatar-img" />
+            ) : (
+              <span className={`profile-avatar-initials profile-avatar-initials--${role ?? 'viewer'}`}>
+                {initials}
+              </span>
+            )}
+          </button>
+
+          {profileMenuOpen && (
+            <div className="profile-menu" role="menu">
+              <div className="profile-menu-header">
+                <span className="profile-menu-display-name">{displayName}</span>
+                <span className={`profile-menu-role-badge role-badge role-badge--${role}`}>{roleName}</span>
+              </div>
+              <div className="profile-menu-divider" />
+              <button
+                className="profile-menu-item"
+                role="menuitem"
+                onClick={() => { setProfileMenuOpen(false); navigate('/profile'); }}
+              >
+                <span className="profile-menu-item-icon">👤</span>
+                Profile
+              </button>
+              <button
+                className="profile-menu-item"
+                role="menuitem"
+                onClick={() => { setProfileMenuOpen(false); navigate('/certificates'); }}
+              >
+                <span className="profile-menu-item-icon">🏆</span>
+                Certificates &amp; Badges
+              </button>
+              <div className="profile-menu-divider" />
+              <button
+                className="profile-menu-item profile-menu-item--danger"
+                role="menuitem"
+                onClick={handleSignOut}
+              >
+                <span className="profile-menu-item-icon">↩</span>
+                Logout
+              </button>
+            </div>
+          )}
+        </div>
       </div>
     </header>
   );

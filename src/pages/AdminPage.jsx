@@ -89,6 +89,45 @@ function WorkspacesSection({ users, getToken }) {
   const [wsNewTag, setWsNewTag] = useState({}); // wsId -> { label, value }
   const [wsNewAssetType, setWsNewAssetType] = useState({}); // wsId -> string
 
+  // ── Per-Workspace Settings (LinkedIn URL) ──────────────────────────────────
+  const [settingsOpen, setSettingsOpen] = useState({}); // wsId -> boolean
+  const [linkedInUrlDraft, setLinkedInUrlDraft] = useState({}); // wsId -> string
+  const [linkedInSaving, setLinkedInSaving] = useState({}); // wsId -> boolean
+  const [linkedInError, setLinkedInError] = useState({}); // wsId -> string | null
+
+  function openSettings(ws) {
+    const isOpen = settingsOpen[ws.id];
+    setSettingsOpen((prev) => ({ ...prev, [ws.id]: !isOpen }));
+    if (!isOpen && linkedInUrlDraft[ws.id] === undefined) {
+      setLinkedInUrlDraft((prev) => ({ ...prev, [ws.id]: ws.linkedInUrl ?? '' }));
+    }
+  }
+
+  async function saveLinkedInUrl(wsId) {
+    const url = (linkedInUrlDraft[wsId] ?? '').trim();
+    if (url && !url.startsWith('https://www.linkedin.com/')) {
+      setLinkedInError((prev) => ({ ...prev, [wsId]: 'Must be a LinkedIn URL (https://www.linkedin.com/…)' }));
+      return;
+    }
+    setLinkedInSaving((prev) => ({ ...prev, [wsId]: true }));
+    setLinkedInError((prev) => ({ ...prev, [wsId]: null }));
+    try {
+      const token = await getToken();
+      const res = await fetch(`/api/workspaces?id=${encodeURIComponent(wsId)}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ linkedInUrl: url || null }),
+      });
+      const body = await res.json();
+      if (!res.ok) throw new Error(body.error ?? 'Save failed');
+      await refreshWorkspaces();
+    } catch (e) {
+      setLinkedInError((prev) => ({ ...prev, [wsId]: e.message }));
+    } finally {
+      setLinkedInSaving((prev) => ({ ...prev, [wsId]: false }));
+    }
+  }
+
   function openWsCatalog(ws) {
     const isOpen = catalogOpen[ws.id];
     setCatalogOpen((prev) => ({ ...prev, [ws.id]: !isOpen }));
@@ -487,6 +526,12 @@ function WorkspacesSection({ users, getToken }) {
                       {catalogOpen[ws.id] ? 'Hide Catalog' : 'Catalog'}
                     </button>
                     <button
+                      className="admin-btn admin-btn--secondary"
+                      onClick={() => openSettings(ws)}
+                    >
+                      {settingsOpen[ws.id] ? 'Hide Settings' : 'Settings'}
+                    </button>
+                    <button
                       className="admin-btn admin-btn--danger"
                       onClick={() => handleDeleteWorkspace(ws.id, ws.name)}
                     >
@@ -660,6 +705,42 @@ function WorkspacesSection({ users, getToken }) {
                       >
                         {catalogSaving[ws.id] ? 'Saving…' : 'Save Catalog'}
                       </button>
+                    </div>
+                  </div>
+                )}
+                {/* ── Per-workspace Settings panel (LinkedIn URL) ── */}
+                {settingsOpen[ws.id] && (
+                  <div className="ws-settings-panel">
+                    <h4 className="ws-settings-title">Workspace Settings</h4>
+                    <div className="ws-settings-field">
+                      <label className="ws-settings-label">LinkedIn Company Page URL</label>
+                      <p className="ws-settings-hint">
+                        Used for the LinkedIn "Add to Profile" button on learner certificates.
+                        Example: <code>https://www.linkedin.com/company/90697682/</code>
+                      </p>
+                      <div className="ws-settings-input-row">
+                        <input
+                          className="admin-input"
+                          type="url"
+                          placeholder="https://www.linkedin.com/company/90697682/"
+                          value={linkedInUrlDraft[ws.id] ?? ws.linkedInUrl ?? ''}
+                          onChange={(e) =>
+                            setLinkedInUrlDraft((prev) => ({ ...prev, [ws.id]: e.target.value }))
+                          }
+                        />
+                        <button
+                          className="admin-btn admin-btn--primary"
+                          onClick={() => saveLinkedInUrl(ws.id)}
+                          disabled={linkedInSaving[ws.id]}
+                        >
+                          {linkedInSaving[ws.id] ? 'Saving…' : 'Save'}
+                        </button>
+                      </div>
+                      {linkedInError[ws.id] && (
+                        <p className="admin-form-error" style={{ marginTop: '0.375rem' }}>
+                          {linkedInError[ws.id]}
+                        </p>
+                      )}
                     </div>
                   </div>
                 )}

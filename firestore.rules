@@ -47,5 +47,19 @@ service cloud.firestore {
         (resource.data.lockedBy == request.auth.uid || request.auth.token.role == 'admin');
     }
 
+    // userProfiles — user can read/write own; admin can read all; no direct client write from others
+    match /userProfiles/{uid} {
+      allow read: if request.auth != null &&
+        (request.auth.uid == uid || request.auth.token.role == 'admin');
+      allow write: if false;
+    }
+
+    // certificates — user can read own; admin can read all; no direct client write
+    match /certificates/{uid} {
+      allow read: if request.auth != null &&
+        (request.auth.uid == uid || request.auth.token.role == 'admin');
+      allow write: if false;
+    }
+
   }
 }

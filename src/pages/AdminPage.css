@@ -550,3 +550,54 @@
   padding: 0.875rem 1rem;
   background: var(--bg-secondary);
 }
+
+/* ── Workspace Settings Panel (LinkedIn URL) ─────────────────────────────── */
+.ws-settings-panel {
+  border-top: 1px solid var(--border-subtle);
+  padding: 0.875rem 1rem;
+  background: var(--bg-secondary);
+}
+
+.ws-settings-title {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin: 0 0 0.875rem;
+}
+
+.ws-settings-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.ws-settings-label {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.ws-settings-hint {
+  font-size: 0.8125rem;
+  color: var(--text-secondary);
+  margin: 0 0 0.5rem;
+}
+
+.ws-settings-hint code {
+  background: rgba(110, 118, 129, 0.2);
+  padding: 0.1em 0.3em;
+  border-radius: 3px;
+  font-size: 0.8em;
+}
+
+.ws-settings-input-row {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.ws-settings-input-row .admin-input {
+  flex: 1;
+}
