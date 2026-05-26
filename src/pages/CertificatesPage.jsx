@@ -94,16 +94,20 @@ export default function CertificatesPage() {
           for (const f of driveFiles) pathMap[f.id] = f.path ?? '';
         }
 
-        // Fetch batch submissions for all documents
+        // Fetch batch submissions for all documents.
+        // Submissions are keyed by driveFileId because ReviewerSidebar navigates
+        // to /file/:driveFileId, which FilePage uses as documentId.
         const docs = Array.isArray(docsJson) ? docsJson : [];
         let submissions = {};
         if (docs.length > 0) {
-          const docIds = docs.map((d) => d.id).join(',');
-          const subsRes = await fetch(
-            `/api/submissions?documentIds=${encodeURIComponent(docIds)}&batch=true`,
-            { headers: { Authorization: `Bearer ${token}` } }
-          );
-          if (subsRes.ok) submissions = await subsRes.json();
+          const driveIds = docs.map((d) => d.driveFileId).filter(Boolean).join(',');
+          if (driveIds) {
+            const subsRes = await fetch(
+              `/api/submissions?documentIds=${encodeURIComponent(driveIds)}&batch=true`,
+              { headers: { Authorization: `Bearer ${token}` } }
+            );
+            if (subsRes.ok) submissions = await subsRes.json();
+          }
         }
 
         if (cancelled) return;
@@ -121,7 +125,7 @@ export default function CertificatesPage() {
           const bucket = moduleMap[mod.key];
           if (!bucket) continue;
           bucket.total += 1;
-          const sub = submissions[doc.id];
+          const sub = submissions[doc.driveFileId];
           if (sub?.status === 'complete') bucket.completed += 1;
         }
 

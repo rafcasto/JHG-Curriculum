@@ -106,16 +106,19 @@ export default async function handler(req, res) {
     const docsSnap = await db.collection('documents')
       .where('workspaceId', '==', workspaceId)
       .get();
-    const docs = docsSnap.docs.map((d) => ({ id: d.id }));
+    const docs = docsSnap.docs.map((d) => ({ id: d.id, driveFileId: d.data().driveFileId }));
     const totalLessons = docs.length;
 
     if (totalLessons === 0) {
       return res.json({ completedCount: 0, totalLessons: 0, certificate: null });
     }
 
-    // Batch-fetch submissions for this user across all docs
-    const subRefs = docs.map((d) => db.collection('submissions').doc(`${uid}_${d.id}`));
-    const subSnaps = await db.getAll(...subRefs);
+    // Batch-fetch submissions for this user across all docs.
+    // Submissions are keyed as `${uid}_${driveFileId}` because ReviewerSidebar
+    // navigates to /file/:driveFileId, which FilePage uses as documentId.
+    const docsWithDriveId = docs.filter((d) => d.driveFileId);
+    const subRefs = docsWithDriveId.map((d) => db.collection('submissions').doc(`${uid}_${d.driveFileId}`));
+    const subSnaps = subRefs.length > 0 ? await db.getAll(...subRefs) : [];
     const completedCount = subSnaps.filter(
       (s) => s.exists && s.data().status === 'complete'
     ).length;
