@@ -10,7 +10,7 @@ export default function CertificatePage() {
 
   useEffect(() => {
     if (!uid) return;
-    fetch(`/api/certificates-public?uid=${encodeURIComponent(uid)}`)
+    fetch(`/api/certificates?uid=${encodeURIComponent(uid)}`)
       .then(async (res) => {
         const body = await res.json();
         if (!res.ok) throw new Error(body.error ?? 'Certificate not found');

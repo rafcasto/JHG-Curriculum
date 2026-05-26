@@ -13,7 +13,7 @@ export function UserProfileProvider({ children }) {
     setProfileLoading(true);
     try {
       const token = await user.getIdToken();
-      const res = await fetch('/api/profile', {
+      const res = await fetch('/api/users?profile=true', {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (res.ok) setProfile(await res.json());

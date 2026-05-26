@@ -59,6 +59,32 @@ async function requireAuth(req) {
 export default async function handler(req, res) {
   if (req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed' });
 
+  // ── Public (no auth): GET /api/certificates?uid=<uid> ────────────────────
+  if (req.query.uid && !req.headers['authorization']) {
+    const { uid: targetUid } = req.query;
+    try {
+      const [certSnap, profileSnap] = await Promise.all([
+        db.collection('certificates').doc(targetUid).get(),
+        db.collection('userProfiles').doc(targetUid).get(),
+      ]);
+      if (!certSnap.exists) return res.status(404).json({ error: 'Certificate not found' });
+      const certData = certSnap.data();
+      const profile = profileSnap.exists ? profileSnap.data() : {};
+      const firstName = profile.firstName ?? '';
+      const lastName = profile.lastName ?? '';
+      const displayName = firstName || lastName ? `${firstName} ${lastName}`.trim() : null;
+      return res.json({
+        displayName,
+        workspaceName: certData.workspaceName,
+        awardedAt: certData.awardedAt,
+        totalLessons: certData.totalLessons,
+      });
+    } catch (e) {
+      console.error('[api/certificates public GET]', e.message);
+      return res.status(500).json({ error: e.message });
+    }
+  }
+
   let claims;
   try {
     claims = await requireAuth(req);

@@ -11,6 +11,7 @@
 
 import { initializeApp, cert, getApps, getApp } from 'firebase-admin/app';
 import { getAuth } from 'firebase-admin/auth';
+import { getFirestore } from 'firebase-admin/firestore';
 
 const serviceAccount = {
   type: process.env.GOOGLE_TYPE,
@@ -31,6 +32,7 @@ const adminApp = getApps().length === 0
   : getApp();
 
 const adminAuth = getAuth(adminApp);
+const db = getFirestore(adminApp);
 
 const VALID_ROLES = ['admin', 'editor', 'viewer', 'reviewer', 'learner'];
 
@@ -80,7 +82,69 @@ async function requireAdmin(req) {
   return claims;
 }
 
+const ALLOWED_PROFILE_FIELDS = ['firstName', 'lastName', 'dateOfBirth', 'company', 'photoURL'];
+
 export default async function handler(req, res) {
+  // ── Profile (self-service, any authenticated user) ──────────────────────
+  if (req.query.profile === 'true') {
+    const authHeader = req.headers['authorization'] ?? '';
+    const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : null;
+    if (!token) return res.status(401).json({ error: 'Unauthorized' });
+    let claims;
+    try {
+      claims = await verifyTokenClaims(token);
+    } catch (e) {
+      return res.status(e.status ?? 500).json({ error: e.message });
+    }
+    const { uid } = claims;
+
+    if (req.method === 'GET') {
+      try {
+        const snap = await db.collection('userProfiles').doc(uid).get();
+        if (!snap.exists) {
+          return res.json({ uid, firstName: '', lastName: '', dateOfBirth: '', company: '', photoURL: '' });
+        }
+        return res.json({ uid, ...snap.data() });
+      } catch (e) {
+        console.error('[api/users profile GET]', e.message);
+        return res.status(500).json({ error: e.message });
+      }
+    }
+
+    if (req.method === 'PATCH') {
+      const body = req.body ?? {};
+      const updates = {};
+      for (const field of ALLOWED_PROFILE_FIELDS) {
+        if (field in body) {
+          if (typeof body[field] !== 'string') {
+            return res.status(400).json({ error: `${field} must be a string` });
+          }
+          updates[field] = body[field].trim();
+        }
+      }
+      if ('photoURL' in updates && updates.photoURL !== '') {
+        try { new URL(updates.photoURL); } catch {
+          return res.status(400).json({ error: 'photoURL must be a valid URL' });
+        }
+      }
+      if (Object.keys(updates).length === 0) {
+        return res.status(400).json({ error: 'No valid fields provided' });
+      }
+      updates.updatedAt = new Date().toISOString();
+      try {
+        await db.collection('userProfiles').doc(uid).set(updates, { merge: true });
+        const snap = await db.collection('userProfiles').doc(uid).get();
+        return res.json({ uid, ...snap.data() });
+      } catch (e) {
+        console.error('[api/users profile PATCH]', e.message);
+        return res.status(500).json({ error: e.message });
+      }
+    }
+
+    return res.status(405).json({ error: 'Method not allowed' });
+  }
+
+  // ── Admin-only operations ────────────────────────────────────────────────
   try {
     await requireAdmin(req);
   } catch (e) {

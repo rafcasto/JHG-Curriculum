@@ -62,7 +62,7 @@ export default function ProfilePage() {
     setSuccess(false);
     try {
       const token = await user.getIdToken();
-      const res = await fetch('/api/profile', {
+      const res = await fetch('/api/users?profile=true', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({ ...form, photoURL }),
