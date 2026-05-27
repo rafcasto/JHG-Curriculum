@@ -1,52 +1,106 @@
-/* ── Theme tokens (dark = default) ─────────────────────────────────────── */
+/* ── DQ brand fonts ────────────────────────────────────────────────────── */
+@font-face {
+  font-family: "Poppins";
+  src: url("/fonts/Poppins-Regular.ttf") format("truetype");
+  font-weight: 400; font-style: normal; font-display: swap;
+}
+@font-face {
+  font-family: "Poppins";
+  src: url("/fonts/Poppins-Medium.ttf") format("truetype");
+  font-weight: 500; font-style: normal; font-display: swap;
+}
+@font-face {
+  font-family: "Poppins";
+  src: url("/fonts/Poppins-SemiBold.ttf") format("truetype");
+  font-weight: 600; font-style: normal; font-display: swap;
+}
+@font-face {
+  font-family: "Poppins";
+  src: url("/fonts/Poppins-Bold.ttf") format("truetype");
+  font-weight: 700; font-style: normal; font-display: swap;
+}
+@font-face {
+  font-family: "Roboto";
+  src: url("/fonts/Roboto-Regular.ttf") format("truetype");
+  font-weight: 400; font-style: normal; font-display: swap;
+}
+@font-face {
+  font-family: "Roboto";
+  src: url("/fonts/Roboto-Italic.ttf") format("truetype");
+  font-weight: 400; font-style: italic; font-display: swap;
+}
+@font-face {
+  font-family: "Roboto";
+  src: url("/fonts/Roboto-Medium.ttf") format("truetype");
+  font-weight: 500; font-style: normal; font-display: swap;
+}
+@font-face {
+  font-family: "Roboto";
+  src: url("/fonts/Roboto-Bold.ttf") format("truetype");
+  font-weight: 700; font-style: normal; font-display: swap;
+}
+
+/* ── DQ design tokens (dark = default) ─────────────────────────────────────
+   Remapped to the Democratize Quality palette: deep-teal primary,
+   sage-green accent, teal-tinted neutrals. Poppins (display) + Roboto (body).
+   ─────────────────────────────────────────────────────────────────────── */
 :root {
-  --bg-primary:      #0d1117;
-  --bg-secondary:    #161b22;
-  --bg-tertiary:     #21262d;
-  --bg-hover:        #1c2128;
-  --border-color:    #30363d;
-  --border-subtle:   #21262d;
-  --text-primary:    #e6edf3;
-  --text-secondary:  #8b949e;
-  --text-muted:      #484f58;
-  --text-body:       #c9d1d9;
-  --accent:          #58a6ff;
-  --accent-subtle:   rgba(88, 166, 255, 0.08);
-  --accent-dim:      rgba(88, 166, 255, 0.15);
-  --color-success:   #3fb950;
+  /* Type */
+  --font-display: "Poppins", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-body:    "Roboto", system-ui, -apple-system, "Segoe UI", sans-serif;
+
+  /* DQ raw brand */
+  --dq-deep-teal:  #1B7B8A;
+  --dq-turquoise:  #40CFDE;
+  --dq-sage-green: #7BC8A4;
+
+  --bg-primary:      #0E1A1E;
+  --bg-secondary:    #0A1417;
+  --bg-tertiary:     #142226;
+  --bg-hover:        #1F353B;
+  --border-color:    rgba(255, 255, 255, 0.10);
+  --border-subtle:   rgba(255, 255, 255, 0.06);
+  --text-primary:    #ECF4F5;
+  --text-secondary:  #B6C7CC;
+  --text-muted:      #7E9197;
+  --text-body:       #C9D6D9;
+  --accent:          #40CFDE;
+  --accent-subtle:   rgba(64, 207, 222, 0.10);
+  --accent-dim:      rgba(64, 207, 222, 0.18);
+  --color-success:   #7BC8A4;
   --color-error:     #f85149;
-  --color-gold:      #e3b341;
-  --color-purple:    #bc8cff;
-  --color-orange:    #f0883e;
-  --scrollbar-thumb: #30363d;
-  --scrollbar-hover: #484f58;
-  --shadow-overlay:  rgba(1, 4, 9, 0.7);
-  --toc-active:      #e05252;
+  --color-gold:      #F5D02B;
+  --color-purple:    #8B3FBF;
+  --color-orange:    #E97A1F;
+  --scrollbar-thumb: rgba(107, 123, 131, 0.30);
+  --scrollbar-hover: rgba(107, 123, 131, 0.50);
+  --shadow-overlay:  rgba(0, 0, 0, 0.6);
+  --toc-active:      #40CFDE;
 }
 
 [data-theme="light"] {
-  --bg-primary:      #ffffff;
-  --bg-secondary:    #f6f8fa;
-  --bg-tertiary:     #eaeef2;
-  --bg-hover:        #f3f4f6;
-  --border-color:    #d0d7de;
-  --border-subtle:   #d8dee4;
-  --text-primary:    #1f2328;
-  --text-secondary:  #656d76;
-  --text-muted:      #9198a1;
-  --text-body:       #1f2328;
-  --accent:          #0969da;
-  --accent-subtle:   rgba(9, 105, 218, 0.06);
-  --accent-dim:      rgba(9, 105, 218, 0.12);
-  --color-success:   #1a7f37;
+  --bg-primary:      #FFFFFF;
+  --bg-secondary:    #F6FAFB;
+  --bg-tertiary:     #ECF4F5;
+  --bg-hover:        #ECF4F5;
+  --border-color:    #E3ECEE;
+  --border-subtle:   #EDF3F4;
+  --text-primary:    #14272D;
+  --text-secondary:  #6B7B83;
+  --text-muted:      #93A2A8;
+  --text-body:       #2A3E47;
+  --accent:          #1B7B8A;
+  --accent-subtle:   rgba(27, 123, 138, 0.06);
+  --accent-dim:      rgba(27, 123, 138, 0.12);
+  --color-success:   #2D7A52;
   --color-error:     #cf222e;
   --color-gold:      #9a6700;
-  --color-purple:    #8250df;
-  --color-orange:    #bc4c00;
-  --scrollbar-thumb: #c8c8c8;
-  --scrollbar-hover: #afb8c1;
-  --shadow-overlay:  rgba(0, 0, 0, 0.3);
-  --toc-active:      #d1242f;
+  --color-purple:    #8B3FBF;
+  --color-orange:    #E97A1F;
+  --scrollbar-thumb: #C8D9DC;
+  --scrollbar-hover: #AEBFC3;
+  --shadow-overlay:  rgba(20, 39, 45, 0.25);
+  --toc-active:      #1B7B8A;
 }
 
 *, *::before, *::after {
@@ -62,7 +116,7 @@ html, body, #root {
 }
 
 body {
-  font-family: Inter, system-ui, -apple-system, sans-serif;
+  font-family: var(--font-body);
   font-size: 16px;
   line-height: 1.5;
   color: var(--text-primary);
@@ -70,6 +124,11 @@ body {
   -moz-osx-font-smoothing: grayscale;
   -webkit-text-size-adjust: 100%;
   text-size-adjust: 100%;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-display);
+  letter-spacing: -0.005em;
 }
 
 button {

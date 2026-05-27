@@ -59,15 +59,16 @@
 }
 
 .fp-nav-btn {
-  padding: 0.5rem 1.25rem;
-  border-radius: 6px;
+  padding: 0.5rem 1.375rem;
+  border-radius: 999px;
+  font-family: var(--font-body);
   font-size: 0.875rem;
   font-weight: 500;
   cursor: pointer;
   border: 1px solid var(--border-color);
   background: var(--bg-tertiary);
   color: var(--text-primary);
-  transition: background 0.12s, opacity 0.12s;
+  transition: background 0.12s, box-shadow 0.16s, opacity 0.12s, transform 0.08s;
 }
 
 .fp-nav-btn:hover:not(:disabled) {
@@ -75,21 +76,30 @@
 }
 
 .fp-nav-btn:disabled {
-  opacity: 0.35;
+  opacity: 0.4;
   cursor: not-allowed;
 }
 
+/* DQ ghost (Previous) */
+.fp-nav-btn--prev {
+  background: var(--bg-primary);
+  border-color: var(--border-color);
+  color: var(--accent);
+}
+
+/* DQ sage CTA (Continue / Complete) */
 .fp-nav-btn--continue,
 .fp-nav-btn--complete {
-  background: var(--accent);
-  border-color: var(--accent);
-  color: #fff;
+  background: var(--dq-sage-green);
+  border-color: transparent;
+  color: #0E1A1E;
+  box-shadow: 0 6px 16px rgba(123, 200, 164, 0.35);
 }
 
 .fp-nav-btn--continue:hover:not(:disabled),
 .fp-nav-btn--complete:hover:not(:disabled) {
-  opacity: 0.85;
-  background: var(--accent);
+  background: #6BB893;
+  transform: translateY(-1px);
 }
 
 .fp-nav-btn--done {
@@ -358,20 +368,21 @@
 }
 
 .file-start-btn {
-  background: #238636;
-  color: #fff;
-  border: 1px solid rgba(240, 246, 252, 0.1);
-  border-radius: 8px;
+  background: var(--dq-sage-green);
+  color: #0E1A1E;
+  border: 1px solid transparent;
+  border-radius: 999px;
   padding: 0.75rem 2.25rem;
+  font-family: var(--font-body);
   font-size: 1rem;
   font-weight: 600;
   cursor: pointer;
   transition: background 0.15s, transform 0.1s;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+  box-shadow: 0 6px 16px rgba(123, 200, 164, 0.35);
 }
 
 .file-start-btn:hover {
-  background: #2ea043;
+  background: #6BB893;
   transform: translateY(-1px);
 }
 

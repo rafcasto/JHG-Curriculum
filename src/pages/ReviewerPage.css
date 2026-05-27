@@ -116,19 +116,22 @@
 }
 
 .rv-continue-btn {
-  padding: 0.625rem 1.75rem;
-  background: var(--accent);
-  color: #fff;
+  padding: 0.625rem 1.875rem;
+  background: var(--dq-sage-green);
+  color: #0E1A1E;
   border: none;
-  border-radius: 6px;
+  border-radius: 999px;
+  font-family: var(--font-body);
   font-size: 0.9375rem;
   font-weight: 500;
   cursor: pointer;
-  transition: opacity 0.12s;
+  box-shadow: 0 6px 16px rgba(123, 200, 164, 0.35);
+  transition: background 0.12s, transform 0.08s, opacity 0.12s;
 }
 
 .rv-continue-btn:hover:not(:disabled) {
-  opacity: 0.85;
+  background: #6BB893;
+  transform: translateY(-1px);
 }
 
 .rv-continue-btn:disabled {
