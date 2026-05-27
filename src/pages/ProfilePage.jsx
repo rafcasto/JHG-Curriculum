@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { updateProfile } from 'firebase/auth';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { storage } from '../firebase';
 import { useAuth } from '../contexts/AuthContext';
@@ -82,6 +83,7 @@ export default function ProfilePage() {
       const storageRef = ref(storage, `profiles/${user.uid}/avatar`);
       await uploadBytes(storageRef, file, { contentType: file.type });
       const downloadURL = await getDownloadURL(storageRef);
+      await updateProfile(user, { photoURL: downloadURL });
       setPhotoURL(downloadURL);
     } catch (e) {
       setError('Photo upload failed: ' + e.message);
