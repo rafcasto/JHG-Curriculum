@@ -3,11 +3,13 @@ import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { storage } from '../firebase';
 import { useAuth } from '../contexts/AuthContext';
 import { useUserProfile } from '../contexts/UserProfileContext';
+import { useWorkspace } from '../contexts/WorkspaceContext';
 import './ProfilePage.css';
 
 export default function ProfilePage() {
   const { user } = useAuth();
   const { profile, profileLoading, refreshProfile } = useUserProfile();
+  const { workspaces } = useWorkspace();
 
   const [form, setForm] = useState({ firstName: '', lastName: '', dateOfBirth: '', company: '' });
   const [photoURL, setPhotoURL] = useState('');
@@ -17,6 +19,9 @@ export default function ProfilePage() {
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState(null);
   const fileInputRef = useRef(null);
+
+  const [earnedBadges, setEarnedBadges] = useState([]);     // { badgeId, workspaceId, awardedAt }
+  const [badgeDefs, setBadgeDefs] = useState([]);           // { id, name, icon, iconType, workspaceId }
 
   // Populate form when profile loads
   useEffect(() => {
@@ -31,6 +36,37 @@ export default function ProfilePage() {
       setPhotoPreview(profile.photoURL ?? '');
     }
   }, [profile]);
+
+  // Fetch earned badges across all user workspaces
+  useEffect(() => {
+    if (!user || !workspaces?.length) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const token = await user.getIdToken();
+        const results = await Promise.all(
+          workspaces.map((ws) =>
+            Promise.all([
+              fetch(`/api/badges?workspaceId=${encodeURIComponent(ws.id)}`, {
+                headers: { Authorization: `Bearer ${token}` },
+              }).then((r) => r.ok ? r.json() : []),
+              fetch(`/api/badges?earned=true&workspaceId=${encodeURIComponent(ws.id)}`, {
+                headers: { Authorization: `Bearer ${token}` },
+              }).then((r) => r.ok ? r.json() : []),
+            ])
+          )
+        );
+        if (cancelled) return;
+        const allDefs = results.flatMap(([defs]) => defs);
+        const allEarned = results.flatMap(([, earned]) => earned);
+        setBadgeDefs(allDefs);
+        setEarnedBadges(allEarned);
+      } catch {
+        // non-critical
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [user, workspaces]);
 
   async function handlePhotoSelect(e) {
     const file = e.target.files?.[0];
@@ -184,6 +220,31 @@ export default function ProfilePage() {
             </button>
           </div>
         </form>
+
+        {/* Earned badges */}
+        {earnedBadges.length > 0 && (
+          <div className="profile-badges-section">
+            <h2 className="profile-badges-title">Earned Badges</h2>
+            <div className="profile-badges-grid">
+              {earnedBadges.map((earned) => {
+                const def = badgeDefs.find((d) => d.id === earned.badgeId);
+                if (!def) return null;
+                return (
+                  <div key={earned.id ?? earned.badgeId} className="profile-badge-chip" title={def.name}>
+                    <span className="profile-badge-icon">
+                      {def.iconType === 'url' ? (
+                        <img src={def.icon} alt="" className="profile-badge-img" />
+                      ) : (
+                        <span role="img" aria-label={def.name}>{def.icon}</span>
+                      )}
+                    </span>
+                    <span className="profile-badge-name">{def.name}</span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

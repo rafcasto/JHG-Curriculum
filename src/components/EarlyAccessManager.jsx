@@ -2,6 +2,22 @@ import { useState, useEffect, useCallback } from 'react';
 import { useWorkspace } from '../contexts/WorkspaceContext';
 import './EarlyAccessManager.css';
 
+const MODULE_DEFS = [
+  { key: '0. preparation', label: 'Preparation' },
+  { key: '1. focus',        label: 'Focus' },
+  { key: '2. value',        label: 'Value' },
+  { key: '3. profile',      label: 'Profile' },
+  { key: '4. applications', label: 'Applications' },
+  { key: '5. network',      label: 'Network' },
+  { key: '6. interviews',   label: 'Interviews' },
+  { key: '7. deal',         label: 'Deal' },
+];
+
+function inferModuleKey(path) {
+  const lower = (path ?? '').toLowerCase();
+  return MODULE_DEFS.find((m) => lower.startsWith(m.key))?.key ?? null;
+}
+
 const STATUS_LABELS = {
   early_access: 'Early Access',
   published: 'Published',
@@ -15,13 +31,14 @@ function DocumentForm({ workspaceId, initial, onSave, onCancel, saving }) {
     category: initial.category ?? '',
     version: initial.version ?? '1.0',
     status: initial.status ?? 'early_access',
+    moduleKey: initial.moduleKey ?? '',
   }));
 
   const set = (field, value) => setForm((f) => ({ ...f, [field]: value }));
 
   function handleSubmit(e) {
     e.preventDefault();
-    onSave({ ...form, workspaceId });
+    onSave({ ...form, moduleKey: form.moduleKey || null, workspaceId });
   }
 
   return (
@@ -47,6 +64,16 @@ function DocumentForm({ workspaceId, initial, onSave, onCancel, saving }) {
       <div className="ea-form-field">
         <label className="ea-label">Category</label>
         <input className="ea-input" value={form.category} onChange={(e) => set('category', e.target.value)} placeholder="e.g. Lesson, Homework" />
+      </div>
+
+      <div className="ea-form-field">
+        <label className="ea-label">Module</label>
+        <select className="ea-input" value={form.moduleKey} onChange={(e) => set('moduleKey', e.target.value)}>
+          <option value="">— None —</option>
+          {MODULE_DEFS.map((m) => (
+            <option key={m.key} value={m.key}>{m.label}</option>
+          ))}
+        </select>
       </div>
 
       <div className="ea-form-field">
@@ -189,6 +216,7 @@ export default function EarlyAccessManager({ getToken }) {
               category: '',
               version: '1.0',
               workspaceId,
+              moduleKey: inferModuleKey(f.path ?? f.title ?? f.name ?? ''),
             }),
           })
         )

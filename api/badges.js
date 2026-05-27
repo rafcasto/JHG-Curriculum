@@ -1,9 +1,10 @@
 /**
- * GET    /api/documents?workspaceId=<id>     — list early-access documents for a workspace (auth required)
- * POST   /api/documents                      — add a Drive file to early access (admin)
- *         body: { driveFileId, title, description, category, version, workspaceId, moduleKey }
- * PATCH  /api/documents?id=<docId>           — update document metadata (admin)
- * DELETE /api/documents?id=<docId>           — remove from early access (admin)
+ * GET    /api/badges?workspaceId=<id>              — list badge definitions for workspace (auth)
+ * GET    /api/badges?earned=true&workspaceId=<id>  — list current user's earned badges (auth)
+ * POST   /api/badges                               — create badge definition (admin)
+ *         body: { workspaceId, name, description, icon, iconType, requiredModules }
+ * PATCH  /api/badges?id=<badgeId>                  — update badge (admin)
+ * DELETE /api/badges?id=<badgeId>                  — delete badge + all userBadges referencing it (admin)
  */
 
 import { initializeApp, cert, getApps, getApp } from 'firebase-admin/app';
@@ -59,70 +60,87 @@ async function requireAdmin(req) {
 }
 
 export default async function handler(req, res) {
-  // ── GET: list early-access documents ──────────────────────────────────────
+  // ── GET ───────────────────────────────────────────────────────────────────
   if (req.method === 'GET') {
-    try { await requireAuth(req); } catch (e) { return res.status(e.status ?? 500).json({ error: e.message }); }
+    let claims;
+    try { claims = await requireAuth(req); } catch (e) { return res.status(e.status ?? 500).json({ error: e.message }); }
 
-    const { workspaceId } = req.query;
+    const { workspaceId, earned } = req.query;
     if (!workspaceId) return res.status(400).json({ error: 'Missing ?workspaceId parameter' });
 
     try {
-      const snapshot = await db.collection('documents')
+      if (earned === 'true') {
+        // Earned badges for the current user in this workspace
+        const snapshot = await db.collection('userBadges')
+          .where('userId', '==', claims.uid)
+          .where('workspaceId', '==', workspaceId)
+          .get();
+        return res.json(snapshot.docs.map((d) => ({ id: d.id, ...d.data() })));
+      }
+
+      // Badge definitions for a workspace
+      const snapshot = await db.collection('badges')
         .where('workspaceId', '==', workspaceId)
-        .orderBy('createdAt', 'desc')
+        .orderBy('createdAt', 'asc')
         .get();
-      const docs = snapshot.docs.map((d) => ({ id: d.id, ...d.data() }));
-      return res.json(docs);
+      return res.json(snapshot.docs.map((d) => ({ id: d.id, ...d.data() })));
     } catch (e) {
-      console.error('[api/documents GET]', e.message);
+      console.error('[api/badges GET]', e.message);
       return res.status(500).json({ error: e.message });
     }
   }
 
-  // ── POST: add to early access ──────────────────────────────────────────────
+  // ── POST: create badge definition ─────────────────────────────────────────
   if (req.method === 'POST') {
     try { await requireAdmin(req); } catch (e) { return res.status(e.status ?? 500).json({ error: e.message }); }
 
-    const { driveFileId, title, description = '', category = '', version = '1.0', workspaceId, moduleKey = null } = req.body ?? {};
-    if (!driveFileId || typeof driveFileId !== 'string') {
-      return res.status(400).json({ error: 'driveFileId is required' });
-    }
-    if (!title || typeof title !== 'string' || !title.trim()) {
-      return res.status(400).json({ error: 'title is required' });
-    }
+    const {
+      workspaceId,
+      name,
+      description = '',
+      icon = '🏅',
+      iconType = 'emoji',
+      requiredModules = [],
+    } = req.body ?? {};
+
     if (!workspaceId || typeof workspaceId !== 'string') {
       return res.status(400).json({ error: 'workspaceId is required' });
+    }
+    if (!name || typeof name !== 'string' || !name.trim()) {
+      return res.status(400).json({ error: 'name is required' });
+    }
+    if (!Array.isArray(requiredModules) || requiredModules.length === 0) {
+      return res.status(400).json({ error: 'requiredModules must be a non-empty array of module keys' });
     }
 
     const now = FieldValue.serverTimestamp();
     try {
-      const ref = await db.collection('documents').add({
-        driveFileId,
-        title: title.trim(),
-        description,
-        category,
-        version,
+      const ref = await db.collection('badges').add({
         workspaceId,
-        moduleKey: moduleKey ?? null,
-        status: 'early_access',
+        name: name.trim(),
+        description,
+        icon,
+        iconType,
+        requiredModules,
+        active: true,
         createdAt: now,
         updatedAt: now,
       });
       return res.status(201).json({ id: ref.id });
     } catch (e) {
-      console.error('[api/documents POST]', e.message);
+      console.error('[api/badges POST]', e.message);
       return res.status(500).json({ error: e.message });
     }
   }
 
-  // ── PATCH: update document metadata ───────────────────────────────────────
+  // ── PATCH: update badge definition ────────────────────────────────────────
   if (req.method === 'PATCH') {
     try { await requireAdmin(req); } catch (e) { return res.status(e.status ?? 500).json({ error: e.message }); }
 
     const { id } = req.query;
     if (!id) return res.status(400).json({ error: 'Missing ?id parameter' });
 
-    const allowed = ['title', 'description', 'category', 'version', 'status', 'moduleKey'];
+    const allowed = ['name', 'description', 'icon', 'iconType', 'requiredModules', 'active'];
     const updates = {};
     for (const key of allowed) {
       if (req.body && req.body[key] !== undefined) updates[key] = req.body[key];
@@ -130,21 +148,30 @@ export default async function handler(req, res) {
     if (Object.keys(updates).length === 0) {
       return res.status(400).json({ error: 'No valid fields to update' });
     }
+    if (updates.name !== undefined) {
+      if (!updates.name || !updates.name.trim()) return res.status(400).json({ error: 'name cannot be empty' });
+      updates.name = updates.name.trim();
+    }
+    if (updates.requiredModules !== undefined) {
+      if (!Array.isArray(updates.requiredModules) || updates.requiredModules.length === 0) {
+        return res.status(400).json({ error: 'requiredModules must be a non-empty array' });
+      }
+    }
     updates.updatedAt = FieldValue.serverTimestamp();
 
     try {
-      const ref = db.collection('documents').doc(id);
+      const ref = db.collection('badges').doc(id);
       const snap = await ref.get();
-      if (!snap.exists) return res.status(404).json({ error: 'Document not found' });
+      if (!snap.exists) return res.status(404).json({ error: 'Badge not found' });
       await ref.update(updates);
       return res.json({ ok: true });
     } catch (e) {
-      console.error('[api/documents PATCH]', e.message);
+      console.error('[api/badges PATCH]', e.message);
       return res.status(500).json({ error: e.message });
     }
   }
 
-  // ── DELETE: remove from early access ──────────────────────────────────────
+  // ── DELETE: remove badge definition and all earned records ────────────────
   if (req.method === 'DELETE') {
     try { await requireAdmin(req); } catch (e) { return res.status(e.status ?? 500).json({ error: e.message }); }
 
@@ -152,13 +179,22 @@ export default async function handler(req, res) {
     if (!id) return res.status(400).json({ error: 'Missing ?id parameter' });
 
     try {
-      const ref = db.collection('documents').doc(id);
+      const ref = db.collection('badges').doc(id);
       const snap = await ref.get();
-      if (!snap.exists) return res.status(404).json({ error: 'Document not found' });
-      await ref.delete();
+      if (!snap.exists) return res.status(404).json({ error: 'Badge not found' });
+
+      // Delete all userBadges referencing this badge
+      const userBadgesSnap = await db.collection('userBadges')
+        .where('badgeId', '==', id)
+        .get();
+      const batch = db.batch();
+      userBadgesSnap.docs.forEach((d) => batch.delete(d.ref));
+      batch.delete(ref);
+      await batch.commit();
+
       return res.json({ ok: true });
     } catch (e) {
-      console.error('[api/documents DELETE]', e.message);
+      console.error('[api/badges DELETE]', e.message);
       return res.status(500).json({ error: e.message });
     }
   }

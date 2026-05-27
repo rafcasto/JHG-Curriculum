@@ -391,6 +391,97 @@ export default async function handler(req, res) {
       });
 
       const interpretation = getInterpretation(contentQualityScore);
+
+      // ── Badge award logic (non-critical) ────────────────────────────────
+      try {
+        // Find the Firestore document record for this driveFileId
+        const docsByDriveId = await db.collection('documents')
+          .where('driveFileId', '==', submission.documentId)
+          .limit(1)
+          .get();
+
+        if (!docsByDriveId.empty) {
+          const docRecord = docsByDriveId.docs[0].data();
+          const moduleKey = docRecord.moduleKey ?? null;
+          const workspaceId = docRecord.workspaceId ?? null;
+
+          if (moduleKey && workspaceId) {
+            // Fetch all workspace documents that have a moduleKey set
+            const allWorkspaceDocsSnap = await db.collection('documents')
+              .where('workspaceId', '==', workspaceId)
+              .get();
+
+            // Group driveFileIds by moduleKey
+            const moduleGroups = {};
+            for (const d of allWorkspaceDocsSnap.docs) {
+              const mk = d.data().moduleKey;
+              const fid = d.data().driveFileId;
+              if (!mk || !fid) continue;
+              if (!moduleGroups[mk]) moduleGroups[mk] = [];
+              moduleGroups[mk].push(fid);
+            }
+
+            // Fetch all submissions for this user in this workspace (by driveFileId)
+            const allDriveIds = Object.values(moduleGroups).flat();
+            if (allDriveIds.length > 0) {
+              const subRefs = allDriveIds.map((fid) =>
+                db.collection('submissions').doc(`${claims.uid}_${fid}`)
+              );
+              const subSnaps = await db.getAll(...subRefs);
+              const completedDriveIds = new Set(
+                subSnaps
+                  .filter((s) => s.exists && s.data().status === 'complete')
+                  .map((s) => s.id.slice(claims.uid.length + 1))
+              );
+
+              // Determine which modules are fully completed
+              const completedModules = new Set();
+              for (const [mk, driveIds] of Object.entries(moduleGroups)) {
+                if (driveIds.length > 0 && driveIds.every((fid) => completedDriveIds.has(fid))) {
+                  completedModules.add(mk);
+                }
+              }
+
+              if (completedModules.size > 0) {
+                // Find active badges whose requiredModules are all satisfied
+                const badgesSnap = await db.collection('badges')
+                  .where('workspaceId', '==', workspaceId)
+                  .where('active', '==', true)
+                  .get();
+
+                const awardPromises = [];
+                for (const badgeDoc of badgesSnap.docs) {
+                  const badge = badgeDoc.data();
+                  const qualifies = Array.isArray(badge.requiredModules) &&
+                    badge.requiredModules.length > 0 &&
+                    badge.requiredModules.every((m) => completedModules.has(m));
+                  if (!qualifies) continue;
+
+                  const userBadgeId = `${claims.uid}_${badgeDoc.id}`;
+                  const userBadgeRef = db.collection('userBadges').doc(userBadgeId);
+                  awardPromises.push(
+                    userBadgeRef.get().then((snap) => {
+                      if (!snap.exists) {
+                        return userBadgeRef.set({
+                          userId: claims.uid,
+                          badgeId: badgeDoc.id,
+                          workspaceId,
+                          awardedAt: FieldValue.serverTimestamp(),
+                        });
+                      }
+                    })
+                  );
+                }
+                await Promise.all(awardPromises);
+              }
+            }
+          }
+        }
+      } catch (badgeErr) {
+        // Badge awarding is non-critical — log but don't fail the submission response
+        console.error('[api/submissions badge award]', badgeErr.message);
+      }
+
       return res.json({
         ok: true,
         submissionId,

@@ -5,6 +5,7 @@ import { useNavigate } from 'react-router-dom';
 import QuestionManager from '../components/QuestionManager';
 import EarlyAccessManager from '../components/EarlyAccessManager';
 import FeedbackDashboard from '../components/FeedbackDashboard';
+import BadgeManager from '../components/BadgeManager';
 import './AdminPage.css';
 
 const ROLES = ['admin', 'editor', 'viewer', 'reviewer', 'learner'];
@@ -874,6 +875,7 @@ export default function AdminPage() {
     { id: 'questions', label: 'Questions' },
     { id: 'feedback', label: 'Feedback' },
     { id: 'early-access', label: 'Early Access' },
+    { id: 'badges', label: 'Badges' },
   ];
 
   return (
@@ -902,6 +904,10 @@ export default function AdminPage() {
 
       {activeTab === 'early-access' && (
         <EarlyAccessManager getToken={getToken} />
+      )}
+
+      {activeTab === 'badges' && (
+        <BadgeManager getToken={getToken} />
       )}
 
       {activeTab === 'feedback' && (

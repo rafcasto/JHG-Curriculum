@@ -53,6 +53,8 @@ export default function CertificatesPage() {
 
   const [certData, setCertData] = useState(null);       // { completedCount, totalLessons, certificate }
   const [moduleSummary, setModuleSummary] = useState([]); // [{ key, label, icon, total, completed }]
+  const [customBadges, setCustomBadges] = useState([]);   // badge definitions
+  const [earnedBadges, setEarnedBadges] = useState([]);   // earned userBadge records
 
   useEffect(() => {
     if (!currentWorkspace?.id || !user) return;
@@ -66,7 +68,7 @@ export default function CertificatesPage() {
         const token = await user.getIdToken();
 
         // Fetch certificate status + workspace documents + drive files in parallel
-        const [certRes, docsRes, driveRes] = await Promise.all([
+        const [certRes, docsRes, driveRes, badgesRes, earnedRes] = await Promise.all([
           fetch(`/api/certificates?workspaceId=${encodeURIComponent(currentWorkspace.id)}`, {
             headers: { Authorization: `Bearer ${token}` },
           }),
@@ -76,6 +78,12 @@ export default function CertificatesPage() {
           currentWorkspace.driveFolderId
             ? fetch(`/api/files?folderId=${encodeURIComponent(currentWorkspace.driveFolderId)}`)
             : Promise.resolve({ ok: true, json: async () => [] }),
+          fetch(`/api/badges?workspaceId=${encodeURIComponent(currentWorkspace.id)}`, {
+            headers: { Authorization: `Bearer ${token}` },
+          }),
+          fetch(`/api/badges?earned=true&workspaceId=${encodeURIComponent(currentWorkspace.id)}`, {
+            headers: { Authorization: `Bearer ${token}` },
+          }),
         ]);
 
         if (cancelled) return;
@@ -85,6 +93,9 @@ export default function CertificatesPage() {
           docsRes.json(),
           driveRes.json(),
         ]);
+
+        const badgesJson = badgesRes.ok ? await badgesRes.json() : [];
+        const earnedJson = earnedRes.ok ? await earnedRes.json() : [];
 
         if (!certRes.ok) throw new Error(certJson.error ?? 'Failed to fetch certificate');
 
@@ -133,6 +144,8 @@ export default function CertificatesPage() {
 
         setCertData(certJson);
         setModuleSummary(summary);
+        setCustomBadges(Array.isArray(badgesJson) ? badgesJson : []);
+        setEarnedBadges(Array.isArray(earnedJson) ? earnedJson : []);
       } catch (e) {
         if (!cancelled) setError(e.message);
       } finally {
@@ -240,10 +253,10 @@ export default function CertificatesPage() {
         )}
       </section>
 
-      {/* ── Module Badges ───────────────────────────────────────────── */}
+      {/* ── Module Progress ─────────────────────────────────────────── */}
       {moduleSummary.length > 0 && (
         <section className="cert-section">
-          <h2 className="cert-section-title">Module Badges</h2>
+          <h2 className="cert-section-title">Module Progress</h2>
           <div className="badges-grid">
             {moduleSummary.map((mod) => {
               const earned = mod.completed === mod.total && mod.total > 0;
@@ -255,6 +268,46 @@ export default function CertificatesPage() {
                     {mod.completed}/{mod.total}
                   </span>
                   {earned && <span className="badge-check">✓</span>}
+                </div>
+              );
+            })}
+          </div>
+        </section>
+      )}
+
+      {/* ── Custom Badges ───────────────────────────────────────────── */}
+      {customBadges.length > 0 && (
+        <section className="cert-section">
+          <h2 className="cert-section-title">Badges</h2>
+          <div className="badges-grid">
+            {customBadges.map((badge) => {
+              const earned = earnedBadges.some((e) => e.badgeId === badge.id);
+              const earnedRecord = earnedBadges.find((e) => e.badgeId === badge.id);
+              return (
+                <div key={badge.id} className={`badge-card badge-card--custom ${earned ? 'badge-card--earned' : 'badge-card--locked'}`}>
+                  <span className="badge-icon">
+                    {badge.iconType === 'url' ? (
+                      <img src={badge.icon} alt="" className="badge-icon-img" />
+                    ) : (
+                      <span role="img" aria-label={badge.name}>{badge.icon}</span>
+                    )}
+                  </span>
+                  <span className="badge-label">{badge.name}</span>
+                  {badge.description && (
+                    <span className="badge-desc">{badge.description}</span>
+                  )}
+                  {earned ? (
+                    <span className="badge-check">✓</span>
+                  ) : (
+                    <span className="badge-locked">🔒</span>
+                  )}
+                  {earned && earnedRecord?.awardedAt && (
+                    <span className="badge-awarded-date">
+                      {new Date(earnedRecord.awardedAt).toLocaleDateString('en-US', {
+                        month: 'short', day: 'numeric', year: 'numeric',
+                      })}
+                    </span>
+                  )}
                 </div>
               );
             })}
