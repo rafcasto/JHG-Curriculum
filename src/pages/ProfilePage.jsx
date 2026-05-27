@@ -73,7 +73,18 @@ export default function ProfilePage() {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    // Preview immediately
+    if (!file.type.startsWith('image/')) {
+      setError('Only image files are allowed.');
+      return;
+    }
+
+    const MAX_SIZE_BYTES = 2 * 1024 * 1024; // 2 MB
+    if (file.size > MAX_SIZE_BYTES) {
+      setError('Image must be smaller than 2 MB. Please compress or resize it before uploading.');
+      return;
+    }
+
+    // Preview only after validation passes
     const objectUrl = URL.createObjectURL(file);
     setPhotoPreview(objectUrl);
 
