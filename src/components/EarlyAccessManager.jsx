@@ -2,28 +2,12 @@ import { useState, useEffect, useCallback } from 'react';
 import { useWorkspace } from '../contexts/WorkspaceContext';
 import './EarlyAccessManager.css';
 
-const MODULE_DEFS = [
-  { key: '0. preparation', label: 'Preparation' },
-  { key: '1. focus',        label: 'Focus' },
-  { key: '2. value',        label: 'Value' },
-  { key: '3. profile',      label: 'Profile' },
-  { key: '4. applications', label: 'Applications' },
-  { key: '5. network',      label: 'Network' },
-  { key: '6. interviews',   label: 'Interviews' },
-  { key: '7. deal',         label: 'Deal' },
-];
-
-function inferModuleKey(path) {
-  const lower = (path ?? '').toLowerCase();
-  return MODULE_DEFS.find((m) => lower.startsWith(m.key))?.key ?? null;
-}
-
 const STATUS_LABELS = {
   early_access: 'Early Access',
   published: 'Published',
 };
 
-function DocumentForm({ workspaceId, initial, onSave, onCancel, saving }) {
+function DocumentForm({ workspaceId, initial, onSave, onCancel, saving, tags }) {
   const [form, setForm] = useState(() => ({
     driveFileId: initial.driveFileId ?? '',
     title: initial.title ?? '',
@@ -70,8 +54,8 @@ function DocumentForm({ workspaceId, initial, onSave, onCancel, saving }) {
         <label className="ea-label">Module</label>
         <select className="ea-input" value={form.moduleKey} onChange={(e) => set('moduleKey', e.target.value)}>
           <option value="">— None —</option>
-          {MODULE_DEFS.map((m) => (
-            <option key={m.key} value={m.key}>{m.label}</option>
+          {(tags ?? []).map((t) => (
+            <option key={t.value} value={t.value}>{t.label}</option>
           ))}
         </select>
       </div>
@@ -92,7 +76,7 @@ function DocumentForm({ workspaceId, initial, onSave, onCancel, saving }) {
 }
 
 export default function EarlyAccessManager({ getToken }) {
-  const { currentWorkspace, refreshWorkspaces } = useWorkspace();
+  const { currentWorkspace, activeTags, refreshWorkspaces } = useWorkspace();
   const [documents, setDocuments] = useState([]);
   const [scores, setScores] = useState({});
   const [driveFiles, setDriveFiles] = useState([]);
@@ -216,7 +200,7 @@ export default function EarlyAccessManager({ getToken }) {
               category: '',
               version: '1.0',
               workspaceId,
-              moduleKey: inferModuleKey(f.path ?? f.title ?? f.name ?? ''),
+              moduleKey: null,
             }),
           })
         )
@@ -403,6 +387,7 @@ export default function EarlyAccessManager({ getToken }) {
                     onSave={handleSave}
                     onCancel={() => setEditingDoc(null)}
                     saving={saving}
+                    tags={activeTags ?? []}
                   />
                 </div>
               )}
