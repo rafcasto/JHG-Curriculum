@@ -17,7 +17,7 @@ export default function LoginPage() {
     setSubmitting(true);
     try {
       await signIn(email, password);
-      navigate('/graph', { replace: true });
+      navigate('/', { replace: true });
     } catch (err) {
       const messages = {
         'auth/invalid-credential': 'Invalid email or password.',

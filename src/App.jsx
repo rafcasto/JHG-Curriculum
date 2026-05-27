@@ -1,4 +1,5 @@
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, useNavigate } from 'react-router-dom';
+import { useLayoutEffect } from 'react';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { WorkspaceProvider } from './contexts/WorkspaceContext';
 import { ThemeProvider } from './contexts/ThemeContext';
@@ -18,16 +19,30 @@ import AdminRoute from './components/AdminRoute';
 /** Redirects to /review for reviewers and learners, /graph for everyone else. */
 function RoleRedirect() {
   const { role, loading } = useAuth();
-  if (loading) return null;
-  if (role === 'reviewer' || role === 'learner') return <Navigate to="/review" replace />;
-  return <Navigate to="/graph" replace />;
+  const navigate = useNavigate();
+  useLayoutEffect(() => {
+    if (loading) return;
+    if (role === 'reviewer' || role === 'learner') {
+      navigate('/review', { replace: true });
+    } else {
+      navigate('/graph', { replace: true });
+    }
+  }, [loading, role, navigate]);
+  return null;
 }
 
 /** Blocks reviewers and learners from accessing a route — redirects them to /review. */
 function ReviewerBlock({ children }) {
   const { role, loading } = useAuth();
+  const navigate = useNavigate();
+  useLayoutEffect(() => {
+    if (loading) return;
+    if (role === 'reviewer' || role === 'learner') {
+      navigate('/review', { replace: true });
+    }
+  }, [loading, role, navigate]);
   if (loading) return null;
-  if (role === 'reviewer' || role === 'learner') return <Navigate to="/review" replace />;
+  if (role === 'reviewer' || role === 'learner') return null;
   return children;
 }
 
