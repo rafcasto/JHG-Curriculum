@@ -54,7 +54,6 @@ export default function Navbar() {
     ? `${profile.firstName} ${profile.lastName ?? ''}`.trim()
     : user?.email ?? '';
 
-  const roleName = { admin: 'Admin', editor: 'Editor', reviewer: 'Reviewer', learner: 'Learner', viewer: 'Viewer' }[role] ?? 'User';
 
   return (
     <header className="navbar">
@@ -130,8 +129,19 @@ export default function Navbar() {
           {profileMenuOpen && (
             <div className="profile-menu" role="menu">
               <div className="profile-menu-header">
-                <span className="profile-menu-display-name">{displayName}</span>
-                <span className={`profile-menu-role-badge role-badge role-badge--${role}`}>{roleName}</span>
+                <span className="profile-menu-header-avatar">
+                  {profile?.photoURL ? (
+                    <img src={profile.photoURL} alt={displayName} className="profile-menu-header-img" />
+                  ) : (
+                    <span className={`profile-avatar-initials profile-avatar-initials--${role ?? 'viewer'}`}>
+                      {initials}
+                    </span>
+                  )}
+                </span>
+                <span className="profile-menu-header-text">
+                  <span className="profile-menu-display-name">{displayName}</span>
+                  <span className="profile-menu-email">{user?.email}</span>
+                </span>
               </div>
               <div className="profile-menu-divider" />
               <button
@@ -139,25 +149,35 @@ export default function Navbar() {
                 role="menuitem"
                 onClick={() => { setProfileMenuOpen(false); navigate('/profile'); }}
               >
-                <span className="profile-menu-item-icon">👤</span>
-                Profile
+                <svg className="profile-menu-item-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                  <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+                  <circle cx="12" cy="7" r="4" />
+                </svg>
+                Your profile
               </button>
               <button
                 className="profile-menu-item"
                 role="menuitem"
                 onClick={() => { setProfileMenuOpen(false); navigate('/certificates'); }}
               >
-                <span className="profile-menu-item-icon">🏆</span>
-                Certificates &amp; Badges
+                <svg className="profile-menu-item-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                  <circle cx="12" cy="8" r="6" />
+                  <path d="M15.477 12.89 17 22l-5-3-5 3 1.523-9.11" />
+                </svg>
+                Certificates &amp; badges
               </button>
               <div className="profile-menu-divider" />
               <button
-                className="profile-menu-item profile-menu-item--danger"
+                className="profile-menu-item"
                 role="menuitem"
                 onClick={handleSignOut}
               >
-                <span className="profile-menu-item-icon">↩</span>
-                Logout
+                <svg className="profile-menu-item-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                  <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+                  <polyline points="16 17 21 12 16 7" />
+                  <line x1="21" y1="12" x2="9" y2="12" />
+                </svg>
+                Sign out
               </button>
             </div>
           )}

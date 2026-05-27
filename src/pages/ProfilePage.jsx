@@ -128,7 +128,7 @@ export default function ProfilePage() {
   return (
     <div className="profile-page">
       <div className="profile-card">
-        <h1 className="profile-title">Your Profile</h1>
+        <h1 className="profile-title">Your profile</h1>
 
         {/* Avatar upload */}
         <div className="profile-avatar-section">
@@ -218,7 +218,7 @@ export default function ProfilePage() {
               type="submit"
               disabled={saving || uploading}
             >
-              {saving ? 'Saving…' : 'Save Profile'}
+              {saving ? 'Saving…' : 'Save profile'}
             </button>
           </div>
         </form>
