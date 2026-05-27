@@ -138,7 +138,8 @@ function BadgeForm({ initial, onSave, onCancel, saving, tags }) {
 }
 
 export default function BadgeManager({ getToken }) {
-  const { currentWorkspace, activeTags } = useWorkspace();
+  const { currentWorkspace } = useWorkspace();
+  const wsTags = currentWorkspace?.tags ?? [];
   const workspaceId = currentWorkspace?.id ?? null;
 
   const [badges, setBadges] = useState([]);
@@ -255,7 +256,7 @@ export default function BadgeManager({ getToken }) {
             onSave={editingBadge ? handleUpdate : handleCreate}
             onCancel={() => { setShowForm(false); setEditingBadge(null); }}
             saving={saving}
-            tags={activeTags ?? []}
+            tags={wsTags}
           />
         </div>
       )}
@@ -268,7 +269,7 @@ export default function BadgeManager({ getToken }) {
         <ul className="bm-list">
           {badges.map((badge) => {
             const moduleLabels = (badge.requiredModules ?? []).map(
-              (k) => activeTags.find((t) => t.value === k)?.label ?? k
+              (k) => wsTags.find((t) => t.value === k)?.label ?? k
             );
             return (
               <li key={badge.id} className={`bm-item ${!badge.active ? 'bm-item--inactive' : ''}`}>
