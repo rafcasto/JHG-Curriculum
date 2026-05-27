@@ -1,7 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
 import { updateProfile } from 'firebase/auth';
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
-import { storage } from '../firebase';
 import { useAuth } from '../contexts/AuthContext';
 import { useUserProfile } from '../contexts/UserProfileContext';
 import { useWorkspace } from '../contexts/WorkspaceContext';
@@ -23,6 +21,24 @@ export default function ProfilePage() {
 
   const [earnedBadges, setEarnedBadges] = useState([]);     // { badgeId, workspaceId, awardedAt }
   const [badgeDefs, setBadgeDefs] = useState([]);           // { id, name, icon, iconType, workspaceId }
+
+  function resizeImageToBase64(file, maxSize = 150) {
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      const url = URL.createObjectURL(file);
+      img.onload = () => {
+        URL.revokeObjectURL(url);
+        const scale = Math.min(maxSize / img.width, maxSize / img.height, 1);
+        const canvas = document.createElement('canvas');
+        canvas.width = Math.round(img.width * scale);
+        canvas.height = Math.round(img.height * scale);
+        canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+        resolve(canvas.toDataURL('image/jpeg', 0.82));
+      };
+      img.onerror = reject;
+      img.src = url;
+    });
+  }
 
   // Populate form when profile loads
   useEffect(() => {
@@ -78,27 +94,31 @@ export default function ProfilePage() {
       return;
     }
 
-    const MAX_SIZE_BYTES = 2 * 1024 * 1024; // 2 MB
-    if (file.size > MAX_SIZE_BYTES) {
-      setError('Image must be smaller than 2 MB. Please compress or resize it before uploading.');
+    if (file.size > 10 * 1024 * 1024) {
+      setError('Image must be smaller than 10 MB.');
       return;
     }
-
-    // Preview only after validation passes
-    const objectUrl = URL.createObjectURL(file);
-    setPhotoPreview(objectUrl);
 
     setUploading(true);
     setError(null);
     try {
-      const storageRef = ref(storage, `profiles/${user.uid}/avatar`);
-      await uploadBytes(storageRef, file, { contentType: file.type });
-      const downloadURL = await getDownloadURL(storageRef);
-      await updateProfile(user, { photoURL: downloadURL });
-      setPhotoURL(downloadURL);
-    } catch (e) {
-      setError('Photo upload failed: ' + e.message);
-      setPhotoPreview(photoURL); // revert preview
+      const dataUrl = await resizeImageToBase64(file);
+      setPhotoPreview(dataUrl);
+
+      const token = await user.getIdToken();
+      const res = await fetch('/api/users?profile=true', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ photoURL: dataUrl }),
+      });
+      const body = await res.json();
+      if (!res.ok) throw new Error(body.error ?? 'Save failed');
+
+      await updateProfile(user, { photoURL: dataUrl }).catch(() => {});
+      setPhotoURL(dataUrl);
+    } catch (err) {
+      setError('Photo upload failed: ' + err.message);
+      setPhotoPreview(photoURL);
     } finally {
       setUploading(false);
     }
