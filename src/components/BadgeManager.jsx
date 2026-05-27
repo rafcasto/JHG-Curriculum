@@ -2,17 +2,6 @@ import { useState, useEffect, useCallback } from 'react';
 import { useWorkspace } from '../contexts/WorkspaceContext';
 import './BadgeManager.css';
 
-const MODULE_DEFS = [
-  { key: '0. preparation', label: 'Preparation' },
-  { key: '1. focus',        label: 'Focus' },
-  { key: '2. value',        label: 'Value' },
-  { key: '3. profile',      label: 'Profile' },
-  { key: '4. applications', label: 'Applications' },
-  { key: '5. network',      label: 'Network' },
-  { key: '6. interviews',   label: 'Interviews' },
-  { key: '7. deal',         label: 'Deal' },
-];
-
 const BLANK_FORM = {
   name: '',
   description: '',
@@ -21,7 +10,7 @@ const BLANK_FORM = {
   requiredModules: [],
 };
 
-function BadgeForm({ initial, onSave, onCancel, saving }) {
+function BadgeForm({ initial, onSave, onCancel, saving, tags }) {
   const [form, setForm] = useState(() =>
     initial
       ? {
@@ -113,15 +102,17 @@ function BadgeForm({ initial, onSave, onCancel, saving }) {
       <div className="bm-form-field">
         <label className="bm-label">Required Modules <span className="bm-label-hint">(all must be completed to earn this badge)</span></label>
         <div className="bm-module-grid">
-          {MODULE_DEFS.map((m) => (
-            <label key={m.key} className={`bm-module-chip ${form.requiredModules.includes(m.key) ? 'bm-module-chip--selected' : ''}`}>
+          {tags.length === 0 ? (
+            <p className="bm-field-hint">No modules defined for this workspace.</p>
+          ) : tags.map((t) => (
+            <label key={t.value} className={`bm-module-chip ${form.requiredModules.includes(t.value) ? 'bm-module-chip--selected' : ''}`}>
               <input
                 type="checkbox"
-                checked={form.requiredModules.includes(m.key)}
-                onChange={() => toggleModule(m.key)}
+                checked={form.requiredModules.includes(t.value)}
+                onChange={() => toggleModule(t.value)}
                 className="bm-module-checkbox"
               />
-              {m.label}
+              {t.label}
             </label>
           ))}
         </div>
@@ -147,7 +138,7 @@ function BadgeForm({ initial, onSave, onCancel, saving }) {
 }
 
 export default function BadgeManager({ getToken }) {
-  const { currentWorkspace } = useWorkspace();
+  const { currentWorkspace, activeTags } = useWorkspace();
   const workspaceId = currentWorkspace?.id ?? null;
 
   const [badges, setBadges] = useState([]);
@@ -264,6 +255,7 @@ export default function BadgeManager({ getToken }) {
             onSave={editingBadge ? handleUpdate : handleCreate}
             onCancel={() => { setShowForm(false); setEditingBadge(null); }}
             saving={saving}
+            tags={activeTags ?? []}
           />
         </div>
       )}
@@ -276,7 +268,7 @@ export default function BadgeManager({ getToken }) {
         <ul className="bm-list">
           {badges.map((badge) => {
             const moduleLabels = (badge.requiredModules ?? []).map(
-              (k) => MODULE_DEFS.find((m) => m.key === k)?.label ?? k
+              (k) => activeTags.find((t) => t.value === k)?.label ?? k
             );
             return (
               <li key={badge.id} className={`bm-item ${!badge.active ? 'bm-item--inactive' : ''}`}>
