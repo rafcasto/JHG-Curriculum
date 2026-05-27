@@ -76,7 +76,7 @@ function DocumentForm({ workspaceId, initial, onSave, onCancel, saving, tags }) 
 }
 
 export default function EarlyAccessManager({ getToken }) {
-  const { currentWorkspace, activeTags, refreshWorkspaces } = useWorkspace();
+  const { currentWorkspace, refreshWorkspaces } = useWorkspace();
   const [documents, setDocuments] = useState([]);
   const [scores, setScores] = useState({});
   const [driveFiles, setDriveFiles] = useState([]);
@@ -387,7 +387,7 @@ export default function EarlyAccessManager({ getToken }) {
                     onSave={handleSave}
                     onCancel={() => setEditingDoc(null)}
                     saving={saving}
-                    tags={activeTags ?? []}
+                    tags={currentWorkspace?.tags ?? []}
                   />
                 </div>
               )}
