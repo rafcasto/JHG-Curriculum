@@ -206,7 +206,7 @@ export default async function handler(req, res) {
         if (pc === null) {
           updates.paywallConfig = null;
         } else if (typeof pc === 'object' && !Array.isArray(pc)) {
-          const { enabled, level2PaymentUrl, level3PaymentUrl, webhookSecret, level2Groups, level3Groups, demoGroups } = pc;
+          const { enabled, registrationEnabled, level2PaymentUrl, level3PaymentUrl, webhookSecret, level2Groups, level3Groups, demoGroups } = pc;
           if (typeof enabled !== 'boolean') {
             return res.status(400).json({ error: 'paywallConfig.enabled must be a boolean' });
           }
@@ -227,6 +227,7 @@ export default async function handler(req, res) {
           }
           updates.paywallConfig = {
             enabled: enabled === true,
+            registrationEnabled: registrationEnabled === true,
             level2PaymentUrl: level2PaymentUrl ?? null,
             level3PaymentUrl: level3PaymentUrl ?? null,
             webhookSecret: resolvedWebhookSecret,
