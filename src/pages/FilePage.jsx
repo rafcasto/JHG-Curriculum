@@ -574,9 +574,7 @@ export default function FilePage() {
   if (role === 'learner' && doc && !canAccessGroup(docGroup, currentWorkspace?.paywallConfig ?? null, paidWorkspaces, workspaceId)) {
     const paywallConfig = currentWorkspace?.paywallConfig ?? null;
     const groupTier = getGroupAccess(docGroup, paywallConfig);
-    const paymentUrl = groupTier === 'level3'
-      ? paywallConfig?.level3PaymentUrl
-      : paywallConfig?.level2PaymentUrl;
+    const paymentUrl = paywallConfig?.paymentUrl ?? null;
     const groupLabel = docGroup === '__root__' ? 'This content' : docGroup;
     const tierLabel = groupTier === 'level3' ? 'Cohort Program' : 'Self-Paced Program';
     return (

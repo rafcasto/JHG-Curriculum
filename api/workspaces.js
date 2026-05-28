@@ -206,15 +206,18 @@ export default async function handler(req, res) {
         if (pc === null) {
           updates.paywallConfig = null;
         } else if (typeof pc === 'object' && !Array.isArray(pc)) {
-          const { enabled, registrationEnabled, level2PaymentUrl, level3PaymentUrl, webhookSecret, level2Groups, level3Groups, demoGroups } = pc;
+          const { enabled, registrationEnabled, paymentUrl, selfPacedProductId, cohortProductId, webhookSecret, level2Groups, level3Groups, demoGroups } = pc;
           if (typeof enabled !== 'boolean') {
             return res.status(400).json({ error: 'paywallConfig.enabled must be a boolean' });
           }
-          if (level2PaymentUrl != null && typeof level2PaymentUrl !== 'string') {
-            return res.status(400).json({ error: 'paywallConfig.level2PaymentUrl must be a string or null' });
+          if (paymentUrl != null && typeof paymentUrl !== 'string') {
+            return res.status(400).json({ error: 'paywallConfig.paymentUrl must be a string or null' });
           }
-          if (level3PaymentUrl != null && typeof level3PaymentUrl !== 'string') {
-            return res.status(400).json({ error: 'paywallConfig.level3PaymentUrl must be a string or null' });
+          if (selfPacedProductId != null && typeof selfPacedProductId !== 'string') {
+            return res.status(400).json({ error: 'paywallConfig.selfPacedProductId must be a string or null' });
+          }
+          if (cohortProductId != null && typeof cohortProductId !== 'string') {
+            return res.status(400).json({ error: 'paywallConfig.cohortProductId must be a string or null' });
           }
           if (!Array.isArray(level2Groups) || !Array.isArray(level3Groups) || !Array.isArray(demoGroups)) {
             return res.status(400).json({ error: 'paywallConfig.level2Groups, level3Groups, and demoGroups must be arrays' });
@@ -228,8 +231,9 @@ export default async function handler(req, res) {
           updates.paywallConfig = {
             enabled: enabled === true,
             registrationEnabled: registrationEnabled === true,
-            level2PaymentUrl: level2PaymentUrl ?? null,
-            level3PaymentUrl: level3PaymentUrl ?? null,
+            paymentUrl: paymentUrl ?? null,
+            selfPacedProductId: selfPacedProductId ?? null,
+            cohortProductId: cohortProductId ?? null,
             webhookSecret: resolvedWebhookSecret,
             level2Groups: level2Groups.filter((g) => typeof g === 'string'),
             level3Groups: level3Groups.filter((g) => typeof g === 'string'),

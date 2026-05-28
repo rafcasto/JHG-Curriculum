@@ -225,9 +225,7 @@ export default function Sidebar({ documents, loading = false, onRefresh, onDocum
       {sortedModules.map((key) => {
         const isGroupLocked = role === 'learner' && !canAccessGroup(key, paywallConfig, paidWorkspaces, currentWorkspace?.id);
         const groupAccessLevel = role === 'learner' ? getGroupAccess(key, paywallConfig) : 'open';
-        const groupPaymentUrl = groupAccessLevel === 'level3'
-          ? (paywallConfig?.level3PaymentUrl ?? null)
-          : (paywallConfig?.level2PaymentUrl ?? null);
+        const groupPaymentUrl = paywallConfig?.paymentUrl ?? null;
         return (
           <div key={key} className="module-group">
             {key === '__root__' ? (

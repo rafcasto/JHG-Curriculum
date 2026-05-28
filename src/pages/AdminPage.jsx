@@ -97,7 +97,7 @@ function WorkspacesSection({ users, getToken, refreshUsers }) {
   const [linkedInError, setLinkedInError] = useState({}); // wsId -> string | null
 
   // ── Per-Workspace Paywall Config ───────────────────────────────────────────
-  const [paywallDraft, setPaywallDraft] = useState({}); // wsId -> { enabled, registrationEnabled, level2PaymentUrl, level3PaymentUrl, webhookSecret, demoGroups, level2Groups, level3Groups }
+  const [paywallDraft, setPaywallDraft] = useState({}); // wsId -> { enabled, registrationEnabled, paymentUrl, selfPacedProductId, cohortProductId, webhookSecret, demoGroups, level2Groups, level3Groups }
   const [paywallSaving, setPaywallSaving] = useState({}); // wsId -> boolean
   const [paywallError, setPaywallError] = useState({}); // wsId -> string | null
   const [paywallAvailGroups, setPaywallAvailGroups] = useState({}); // wsId -> string[]
@@ -122,8 +122,9 @@ function WorkspacesSection({ users, getToken, refreshUsers }) {
           [ws.id]: {
             enabled: pc.enabled === true,
             registrationEnabled: pc.registrationEnabled === true,
-            level2PaymentUrl: pc.level2PaymentUrl ?? '',
-            level3PaymentUrl: pc.level3PaymentUrl ?? '',
+            paymentUrl: pc.paymentUrl ?? '',
+            selfPacedProductId: pc.selfPacedProductId ?? '',
+            cohortProductId: pc.cohortProductId ?? '',
             webhookSecret: '', // never pre-filled (write-only from the client)
             demoGroups: pc.demoGroups ?? [],
             level2Groups: pc.level2Groups ?? [],
@@ -997,12 +998,12 @@ function WorkspacesSection({ users, getToken, refreshUsers }) {
                             <input
                               className="admin-input"
                               type="url"
-                              placeholder="Level 2 — Self-Paced payment URL"
-                              value={paywallDraft[ws.id]?.level2PaymentUrl ?? ''}
+                              placeholder="Payment URL"
+                              value={paywallDraft[ws.id]?.paymentUrl ?? ''}
                               onChange={(e) =>
                                 setPaywallDraft((prev) => ({
                                   ...prev,
-                                  [ws.id]: { ...(prev[ws.id] ?? {}), level2PaymentUrl: e.target.value },
+                                  [ws.id]: { ...(prev[ws.id] ?? {}), paymentUrl: e.target.value },
                                 }))
                               }
                             />
@@ -1010,13 +1011,27 @@ function WorkspacesSection({ users, getToken, refreshUsers }) {
                           <div className="ws-settings-input-row" style={{ marginBottom: '0.5rem' }}>
                             <input
                               className="admin-input"
-                              type="url"
-                              placeholder="Level 3 — Cohort payment URL"
-                              value={paywallDraft[ws.id]?.level3PaymentUrl ?? ''}
+                              type="text"
+                              placeholder="Self-Paced Product ID"
+                              value={paywallDraft[ws.id]?.selfPacedProductId ?? ''}
                               onChange={(e) =>
                                 setPaywallDraft((prev) => ({
                                   ...prev,
-                                  [ws.id]: { ...(prev[ws.id] ?? {}), level3PaymentUrl: e.target.value },
+                                  [ws.id]: { ...(prev[ws.id] ?? {}), selfPacedProductId: e.target.value },
+                                }))
+                              }
+                            />
+                          </div>
+                          <div className="ws-settings-input-row" style={{ marginBottom: '0.5rem' }}>
+                            <input
+                              className="admin-input"
+                              type="text"
+                              placeholder="Cohort Product ID"
+                              value={paywallDraft[ws.id]?.cohortProductId ?? ''}
+                              onChange={(e) =>
+                                setPaywallDraft((prev) => ({
+                                  ...prev,
+                                  [ws.id]: { ...(prev[ws.id] ?? {}), cohortProductId: e.target.value },
                                 }))
                               }
                             />
@@ -1042,7 +1057,7 @@ function WorkspacesSection({ users, getToken, refreshUsers }) {
                           </div>
                           <p className="ws-settings-hint" style={{ marginBottom: '0.75rem' }}>
                             Payment events should POST to <code>/api/webhooks/payment</code> with
-                            <code> workspaceId</code>, <code>userId</code>, <code>accessLevel</code> (2 or 3), and <code>secret</code>.
+                            <code> workspaceId</code>, <code>productId</code>, and <code>secret</code>.
                           </p>
 
                           {paywallGroupsLoading[ws.id] ? (

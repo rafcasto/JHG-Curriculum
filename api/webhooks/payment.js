@@ -18,7 +18,7 @@
  *               "email":       "{{customer_email}}",
  *               "name":        "{{customer_name}}",       ← optional
  *               "workspaceId": "YOUR_FIRESTORE_WS_ID",
- *               "accessLevel": 2,                         ← 2 = self-paced, 3 = cohort
+ *               "productId":   "{{product_id}}",          ← matches selfPacedProductId or cohortProductId
  *               "secret":      "YOUR_WORKSPACE_SECRET"
  *             }
  *
@@ -33,7 +33,7 @@
  *   email       string   learner's email address
  *   name        string?  optional display name
  *   workspaceId string   Firestore workspace document ID
- *   accessLevel 2 | 3   2 = self-paced, 3 = cohort (also grants level-2 content)
+ *   productId   string   must match paywallConfig.selfPacedProductId (→ level 2) or cohortProductId (→ level 3)
  *   secret      string   must match paywallConfig.webhookSecret for this workspace
  * ─────────────────────────────────────────────────────────────────────────
  */
@@ -124,7 +124,7 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const { email, name, workspaceId, accessLevel, secret } = req.body ?? {};
+  const { email, name, workspaceId, productId, secret } = req.body ?? {};
 
   // Validate required fields
   if (!email || typeof email !== 'string' || !email.includes('@')) {
@@ -133,8 +133,8 @@ export default async function handler(req, res) {
   if (!workspaceId || typeof workspaceId !== 'string') {
     return res.status(400).json({ error: 'workspaceId is required' });
   }
-  if (accessLevel !== 2 && accessLevel !== 3) {
-    return res.status(400).json({ error: 'accessLevel must be 2 or 3' });
+  if (!productId || typeof productId !== 'string') {
+    return res.status(400).json({ error: 'productId is required' });
   }
   if (!secret || typeof secret !== 'string') {
     return res.status(400).json({ error: 'secret is required' });
@@ -164,6 +164,17 @@ export default async function handler(req, res) {
     return res.status(401).json({ error: 'Invalid secret' });
   }
 
+  // Resolve productId → access level
+  const { selfPacedProductId, cohortProductId } = wsData?.paywallConfig ?? {};
+  let accessLevel;
+  if (productId === selfPacedProductId) {
+    accessLevel = 2;
+  } else if (productId === cohortProductId) {
+    accessLevel = 3;
+  } else {
+    return res.status(400).json({ error: `productId '${productId}' is not configured for this workspace` });
+  }
+
   const displayName = typeof name === 'string' ? name.trim() || undefined : undefined;
 
   // Provision Firebase Auth user
@@ -178,7 +189,7 @@ export default async function handler(req, res) {
   // Grant workspace access
   try {
     await grantAccess(workspaceId, uid, email, displayName, accessLevel);
-    console.log(`[api/webhooks/payment] Granted level ${accessLevel}: user=${uid} (${email}) workspace=${workspaceId} created=${created}`);
+    console.log(`[api/webhooks/payment] Granted level ${accessLevel} (productId=${productId}): user=${uid} (${email}) workspace=${workspaceId} created=${created}`);}
     return res.status(200).json({ ok: true, userId: uid, created });
   } catch (e) {
     console.error('[api/webhooks/payment] grantAccess failed:', e.message);
