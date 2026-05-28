@@ -3,6 +3,9 @@ import react from '@vitejs/plugin-react'
 
 export default defineConfig({
   plugins: [react()],
+  build: {
+    target: ['es2020', 'safari14'],
+  },
   server: {
     // Proxy /api to the Vercel dev server (port 3000) during local development.
     // Run: npx vercel dev   instead of: npm run dev
