@@ -80,7 +80,7 @@ async function getOrCreateUser(email, displayName) {
     if (e.code !== 'auth/user-not-found') throw e;
     firebaseUser = await auth.createUser({
       email,
-      emailVerified: false,
+      emailVerified: true,
       ...(displayName ? { displayName } : {}),
     });
     created = true;

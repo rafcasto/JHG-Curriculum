@@ -15,6 +15,7 @@ import ProfilePage from './pages/ProfilePage';
 import CertificatesPage from './pages/CertificatesPage';
 import CertificatePage from './pages/CertificatePage';
 import AdminRoute from './components/AdminRoute';
+import RegisterPage from './pages/RegisterPage';
 
 /** Redirects to /review for reviewers and learners, /graph for everyone else. */
 function RoleRedirect() {
@@ -58,6 +59,9 @@ function App() {
 
               {/* Public certificate page — no auth required */}
               <Route path="/certificate/:uid" element={<CertificatePage />} />
+
+              {/* Public learner registration page */}
+              <Route path="/register/:workspaceId" element={<RegisterPage />} />
 
               <Route
                 element={

@@ -97,11 +97,12 @@ function WorkspacesSection({ users, getToken, refreshUsers }) {
   const [linkedInError, setLinkedInError] = useState({}); // wsId -> string | null
 
   // ── Per-Workspace Paywall Config ───────────────────────────────────────────
-  const [paywallDraft, setPaywallDraft] = useState({}); // wsId -> { enabled, level2PaymentUrl, level3PaymentUrl, webhookSecret, demoGroups, level2Groups, level3Groups }
+  const [paywallDraft, setPaywallDraft] = useState({}); // wsId -> { enabled, registrationEnabled, level2PaymentUrl, level3PaymentUrl, webhookSecret, demoGroups, level2Groups, level3Groups }
   const [paywallSaving, setPaywallSaving] = useState({}); // wsId -> boolean
   const [paywallError, setPaywallError] = useState({}); // wsId -> string | null
   const [paywallAvailGroups, setPaywallAvailGroups] = useState({}); // wsId -> string[]
   const [paywallGroupsLoading, setPaywallGroupsLoading] = useState({}); // wsId -> boolean
+  const [regUrlCopied, setRegUrlCopied] = useState({}); // wsId -> boolean
 
   // ── Learner Access Level Promotion ─────────────────────────────────────────
   const [accessLevelSel, setAccessLevelSel] = useState({}); // `${wsId}:${uid}` -> 0|2|3
@@ -120,6 +121,7 @@ function WorkspacesSection({ users, getToken, refreshUsers }) {
           ...prev,
           [ws.id]: {
             enabled: pc.enabled === true,
+            registrationEnabled: pc.registrationEnabled === true,
             level2PaymentUrl: pc.level2PaymentUrl ?? '',
             level3PaymentUrl: pc.level3PaymentUrl ?? '',
             webhookSecret: '', // never pre-filled (write-only from the client)
@@ -162,6 +164,7 @@ function WorkspacesSection({ users, getToken, refreshUsers }) {
         body: JSON.stringify({
           paywallConfig: {
             enabled: draft.enabled,
+            registrationEnabled: draft.registrationEnabled,
             level2PaymentUrl: draft.level2PaymentUrl.trim() || null,
             level3PaymentUrl: draft.level3PaymentUrl.trim() || null,
             ...(draft.webhookSecret.trim() ? { webhookSecret: draft.webhookSecret.trim() } : {}),
@@ -949,6 +952,44 @@ function WorkspacesSection({ users, getToken, refreshUsers }) {
                         />
                         Enable paywall for this workspace
                       </label>
+
+                      <label className="catalog-toggle-label" style={{ marginBottom: '0.75rem' }}>
+                        <input
+                          type="checkbox"
+                          checked={paywallDraft[ws.id]?.registrationEnabled ?? false}
+                          onChange={(e) =>
+                            setPaywallDraft((prev) => ({
+                              ...prev,
+                              [ws.id]: { ...(prev[ws.id] ?? {}), registrationEnabled: e.target.checked },
+                            }))
+                          }
+                        />
+                        Enable learner self-registration
+                      </label>
+
+                      {paywallDraft[ws.id]?.registrationEnabled && (
+                        <div className="ws-settings-input-row" style={{ marginBottom: '0.75rem', display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                          <input
+                            className="admin-input"
+                            type="text"
+                            readOnly
+                            value={`${window.location.origin}/register/${ws.id}`}
+                            onFocus={(e) => e.target.select()}
+                          />
+                          <button
+                            type="button"
+                            className="admin-btn"
+                            style={{ whiteSpace: 'nowrap', flexShrink: 0 }}
+                            onClick={() => {
+                              navigator.clipboard.writeText(`${window.location.origin}/register/${ws.id}`);
+                              setRegUrlCopied((prev) => ({ ...prev, [ws.id]: true }));
+                              setTimeout(() => setRegUrlCopied((prev) => ({ ...prev, [ws.id]: false })), 2000);
+                            }}
+                          >
+                            {regUrlCopied[ws.id] ? 'Copied!' : 'Copy link'}
+                          </button>
+                        </div>
+                      )}
 
                       {paywallDraft[ws.id]?.enabled && (
                         <>

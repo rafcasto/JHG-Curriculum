@@ -195,7 +195,7 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: 'Password must be at least 8 characters' });
     }
     try {
-      const userRecord = await adminAuth.createUser({ email, password });
+      const userRecord = await adminAuth.createUser({ email, password, emailVerified: true });
       await adminAuth.setCustomUserClaims(userRecord.uid, { role });
       return res.status(201).json({
         uid: userRecord.uid,
