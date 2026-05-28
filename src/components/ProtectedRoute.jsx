@@ -5,7 +5,7 @@ import { auth } from '../firebase';
 import { useAuth } from '../contexts/AuthContext';
 
 export default function ProtectedRoute({ children }) {
-  const { user, loading } = useAuth();
+  const { user, role, loading } = useAuth();
   const [resent, setResent] = useState(false);
   const [checking, setChecking] = useState(false);
 
@@ -38,9 +38,21 @@ export default function ProtectedRoute({ children }) {
 
   if (!user) return <Navigate to="/login" replace />;
 
-  if (!user.emailVerified) {
+  // Only learners who self-registered need email verification.
+  // All other roles (admin, editor, viewer, reviewer) bypass this gate.
+  if (role === 'learner' && !user.emailVerified) {
     return (
-      <div className="loading-screen" style={{ flexDirection: 'column', gap: '1rem', padding: '2rem', textAlign: 'center' }}>
+      <div style={{
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        minHeight: '100vh',
+        gap: '1rem',
+        padding: '2rem',
+        textAlign: 'center',
+        background: 'var(--bg-primary)',
+      }}>
         <span style={{ fontSize: '2.5rem' }}>✉️</span>
         <h2 style={{ margin: 0, color: 'var(--text-primary)' }}>Verify your email</h2>
         <p style={{ margin: 0, color: 'var(--text-secondary)', maxWidth: '360px' }}>
