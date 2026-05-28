@@ -11,7 +11,7 @@ import './AdminPage.css';
 const ROLES = ['admin', 'editor', 'viewer', 'reviewer', 'learner'];
 
 // ── Workspace Management Section ────────────────────────────────────────────
-function WorkspacesSection({ users, getToken }) {
+function WorkspacesSection({ users, getToken, refreshUsers }) {
   const { workspaces, loading: wsLoading, error: wsLoadError, refreshWorkspaces } = useWorkspace();
   const [wsForm, setWsForm] = useState({ name: '', driveFolderId: '' });
   const [wsFormError, setWsFormError] = useState(null);
@@ -96,12 +96,108 @@ function WorkspacesSection({ users, getToken }) {
   const [linkedInSaving, setLinkedInSaving] = useState({}); // wsId -> boolean
   const [linkedInError, setLinkedInError] = useState({}); // wsId -> string | null
 
+  // ── Per-Workspace Paywall Config ───────────────────────────────────────────
+  const [paywallDraft, setPaywallDraft] = useState({}); // wsId -> { enabled, level2PaymentUrl, level3PaymentUrl, webhookSecret, demoGroups, level2Groups, level3Groups }
+  const [paywallSaving, setPaywallSaving] = useState({}); // wsId -> boolean
+  const [paywallError, setPaywallError] = useState({}); // wsId -> string | null
+  const [paywallAvailGroups, setPaywallAvailGroups] = useState({}); // wsId -> string[]
+  const [paywallGroupsLoading, setPaywallGroupsLoading] = useState({}); // wsId -> boolean
+
+  // ── Learner Access Level Promotion ─────────────────────────────────────────
+  const [accessLevelSel, setAccessLevelSel] = useState({}); // `${wsId}:${uid}` -> 0|2|3
+  const [accessLevelSaving, setAccessLevelSaving] = useState({}); // `${wsId}:${uid}` -> boolean
+
   function openSettings(ws) {
     const isOpen = settingsOpen[ws.id];
     setSettingsOpen((prev) => ({ ...prev, [ws.id]: !isOpen }));
-    if (!isOpen && linkedInUrlDraft[ws.id] === undefined) {
-      setLinkedInUrlDraft((prev) => ({ ...prev, [ws.id]: ws.linkedInUrl ?? '' }));
+    if (!isOpen) {
+      if (linkedInUrlDraft[ws.id] === undefined) {
+        setLinkedInUrlDraft((prev) => ({ ...prev, [ws.id]: ws.linkedInUrl ?? '' }));
+      }
+      if (paywallDraft[ws.id] === undefined) {
+        const pc = ws.paywallConfig ?? {};
+        setPaywallDraft((prev) => ({
+          ...prev,
+          [ws.id]: {
+            enabled: pc.enabled === true,
+            level2PaymentUrl: pc.level2PaymentUrl ?? '',
+            level3PaymentUrl: pc.level3PaymentUrl ?? '',
+            webhookSecret: '', // never pre-filled (write-only from the client)
+            demoGroups: pc.demoGroups ?? [],
+            level2Groups: pc.level2Groups ?? [],
+            level3Groups: pc.level3Groups ?? [],
+          },
+        }));
+      }
+      // Fetch available groups from Drive if not already loaded
+      if (!paywallAvailGroups[ws.id] && ws.driveFolderId) {
+        setPaywallGroupsLoading((prev) => ({ ...prev, [ws.id]: true }));
+        fetch(`/api/files?folderId=${encodeURIComponent(ws.driveFolderId)}`)
+          .then((r) => r.json())
+          .then((files) => {
+            const groups = [...new Set(
+              files.map((f) => {
+                const p = f.path ?? '';
+                return p.includes('/') ? p.split('/')[0] : '__root__';
+              })
+            )].sort((a, b) => a === '__root__' ? -1 : b === '__root__' ? 1 : a.localeCompare(b));
+            setPaywallAvailGroups((prev) => ({ ...prev, [ws.id]: groups }));
+          })
+          .catch(() => setPaywallAvailGroups((prev) => ({ ...prev, [ws.id]: [] })))
+          .finally(() => setPaywallGroupsLoading((prev) => ({ ...prev, [ws.id]: false })));
+      }
     }
+  }
+
+  async function savePaywallConfig(wsId) {
+    const draft = paywallDraft[wsId];
+    if (!draft) return;
+    setPaywallSaving((prev) => ({ ...prev, [wsId]: true }));
+    setPaywallError((prev) => ({ ...prev, [wsId]: null }));
+    try {
+      const token = await getToken();
+      const res = await fetch(`/api/workspaces?id=${encodeURIComponent(wsId)}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({
+          paywallConfig: {
+            enabled: draft.enabled,
+            level2PaymentUrl: draft.level2PaymentUrl.trim() || null,
+            level3PaymentUrl: draft.level3PaymentUrl.trim() || null,
+            ...(draft.webhookSecret.trim() ? { webhookSecret: draft.webhookSecret.trim() } : {}),
+            demoGroups: draft.demoGroups,
+            level2Groups: draft.level2Groups,
+            level3Groups: draft.level3Groups,
+          },
+        }),
+      });
+      const body = await res.json();
+      if (!res.ok) throw new Error(body.error ?? 'Save failed');
+      await refreshWorkspaces();
+    } catch (e) {
+      setPaywallError((prev) => ({ ...prev, [wsId]: e.message }));
+    } finally {
+      setPaywallSaving((prev) => ({ ...prev, [wsId]: false }));
+    }
+  }
+
+  function togglePaywallGroup(wsId, groupKey, targetList) {
+    setPaywallDraft((prev) => {
+      const draft = prev[wsId];
+      if (!draft) return prev;
+      // Remove from all lists first (mutual exclusivity)
+      const allLists = ['demoGroups', 'level2Groups', 'level3Groups'];
+      const updated = { ...draft };
+      allLists.forEach((list) => {
+        updated[list] = (draft[list] ?? []).filter((g) => g !== groupKey);
+      });
+      // Add to target list only if it wasn't already there (toggle off if re-clicking)
+      const wasInTarget = (draft[targetList] ?? []).includes(groupKey);
+      if (!wasInTarget) {
+        updated[targetList] = [...(updated[targetList] ?? []), groupKey];
+      }
+      return { ...prev, [wsId]: updated };
+    });
   }
 
   async function saveLinkedInUrl(wsId) {
@@ -340,6 +436,42 @@ function WorkspacesSection({ users, getToken }) {
     return users.find((u) => u.uid === uid)?.email ?? uid;
   }
 
+  function userForUid(uid) {
+    return users.find((u) => u.uid === uid);
+  }
+
+  function currentAccessLevel(uid, wsId) {
+    return users.find((u) => u.uid === uid)?.paidWorkspaces?.[wsId] ?? 0;
+  }
+
+  async function handleSetAccessLevel(wsId, uid) {
+    const key = `${wsId}:${uid}`;
+    const level = accessLevelSel[key] ?? currentAccessLevel(uid, wsId);
+    setAccessLevelSaving((prev) => ({ ...prev, [key]: true }));
+    try {
+      const token = await getToken();
+      const res = await fetch(`/api/users?uid=${encodeURIComponent(uid)}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ workspaceId: wsId, accessLevel: level }),
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body.error ?? 'Failed to set access level');
+      }
+      await refreshUsers();
+      setAccessLevelSel((prev) => {
+        const next = { ...prev };
+        delete next[key];
+        return next;
+      });
+    } catch (e) {
+      setWsError(e.message);
+    } finally {
+      setAccessLevelSaving((prev) => ({ ...prev, [key]: false }));
+    }
+  }
+
   return (
     <section className="admin-section">
       <h2 className="admin-section-title">Workspaces</h2>
@@ -548,17 +680,68 @@ function WorkspacesSection({ users, getToken }) {
                       <p className="ws-no-users">No users assigned yet.</p>
                     ) : (
                       <ul className="ws-user-list">
-                        {assignedUids.map((uid) => (
-                          <li key={uid} className="ws-user-row">
-                            <span className="ws-user-email">{emailForUid(uid)}</span>
-                            <button
-                              className="admin-btn admin-btn--danger admin-btn--sm"
-                              onClick={() => handleRemoveUser(ws.id, uid)}
-                            >
-                              Remove
-                            </button>
-                          </li>
-                        ))}
+                        {assignedUids.map((uid) => {
+                          const user = userForUid(uid);
+                          const isLearner = user?.role === 'learner';
+                          const key = `${ws.id}:${uid}`;
+                          const curLevel = currentAccessLevel(uid, ws.id);
+                          const selLevel = accessLevelSel[key] ?? curLevel;
+                          return (
+                            <li key={uid} className="ws-user-row">
+                              <span className="ws-user-email">
+                                {emailForUid(uid)}
+                                {isLearner && (
+                                  <span
+                                    className={`ws-user-access-badge${
+                                      curLevel === 3
+                                        ? ' ws-user-access--l3'
+                                        : curLevel === 2
+                                        ? ' ws-user-access--l2'
+                                        : ' ws-user-access--none'
+                                    }`}
+                                  >
+                                    {curLevel === 3
+                                      ? 'Level 3'
+                                      : curLevel === 2
+                                      ? 'Level 2'
+                                      : 'No access'}
+                                  </span>
+                                )}
+                              </span>
+                              {isLearner && (
+                                <div className="ws-promote-row">
+                                  <select
+                                    className="admin-select admin-select--sm"
+                                    value={selLevel}
+                                    onChange={(e) =>
+                                      setAccessLevelSel((prev) => ({
+                                        ...prev,
+                                        [key]: Number(e.target.value),
+                                      }))
+                                    }
+                                  >
+                                    <option value={0}>No access</option>
+                                    <option value={2}>Level 2 — Self-Paced</option>
+                                    <option value={3}>Level 3 — Cohort</option>
+                                  </select>
+                                  <button
+                                    className="admin-btn admin-btn--primary admin-btn--sm"
+                                    disabled={accessLevelSaving[key] || selLevel === curLevel}
+                                    onClick={() => handleSetAccessLevel(ws.id, uid)}
+                                  >
+                                    {accessLevelSaving[key] ? 'Saving…' : 'Set'}
+                                  </button>
+                                </div>
+                              )}
+                              <button
+                                className="admin-btn admin-btn--danger admin-btn--sm"
+                                onClick={() => handleRemoveUser(ws.id, uid)}
+                              >
+                                Remove
+                              </button>
+                            </li>
+                          );
+                        })}
                       </ul>
                     )}
 
@@ -743,6 +926,152 @@ function WorkspacesSection({ users, getToken }) {
                         </p>
                       )}
                     </div>
+
+                    {/* ── Paywall Config ── */}
+                    <div className="ws-settings-field" style={{ marginTop: '1.25rem' }}>
+                      <label className="ws-settings-label">Paywall</label>
+                      <p className="ws-settings-hint">
+                        Control which lesson groups require payment. Learners see locked groups in the sidebar.
+                        Level 2 (Self-Paced) and Level 3 (Cohort) are separate tiers — purchasing Level 3 also grants Level 2 access.
+                        Demo groups are freely accessible as a free preview (Level 1).
+                      </p>
+
+                      <label className="catalog-toggle-label" style={{ marginBottom: '0.75rem' }}>
+                        <input
+                          type="checkbox"
+                          checked={paywallDraft[ws.id]?.enabled ?? false}
+                          onChange={(e) =>
+                            setPaywallDraft((prev) => ({
+                              ...prev,
+                              [ws.id]: { ...(prev[ws.id] ?? {}), enabled: e.target.checked },
+                            }))
+                          }
+                        />
+                        Enable paywall for this workspace
+                      </label>
+
+                      {paywallDraft[ws.id]?.enabled && (
+                        <>
+                          <div className="ws-settings-input-row" style={{ marginBottom: '0.5rem' }}>
+                            <input
+                              className="admin-input"
+                              type="url"
+                              placeholder="Level 2 — Self-Paced payment URL"
+                              value={paywallDraft[ws.id]?.level2PaymentUrl ?? ''}
+                              onChange={(e) =>
+                                setPaywallDraft((prev) => ({
+                                  ...prev,
+                                  [ws.id]: { ...(prev[ws.id] ?? {}), level2PaymentUrl: e.target.value },
+                                }))
+                              }
+                            />
+                          </div>
+                          <div className="ws-settings-input-row" style={{ marginBottom: '0.5rem' }}>
+                            <input
+                              className="admin-input"
+                              type="url"
+                              placeholder="Level 3 — Cohort payment URL"
+                              value={paywallDraft[ws.id]?.level3PaymentUrl ?? ''}
+                              onChange={(e) =>
+                                setPaywallDraft((prev) => ({
+                                  ...prev,
+                                  [ws.id]: { ...(prev[ws.id] ?? {}), level3PaymentUrl: e.target.value },
+                                }))
+                              }
+                            />
+                          </div>
+                          <div className="ws-settings-input-row" style={{ marginBottom: '1rem' }}>
+                            <input
+                              className="admin-input"
+                              type="password"
+                              placeholder={
+                                ws.paywallConfig?.webhookSecretConfigured
+                                  ? '\u25cf Webhook secret configured \u2014 enter new value to change'
+                                  : 'Webhook secret (used to authenticate payment events)'
+                              }
+                              value={paywallDraft[ws.id]?.webhookSecret ?? ''}
+                              autoComplete="new-password"
+                              onChange={(e) =>
+                                setPaywallDraft((prev) => ({
+                                  ...prev,
+                                  [ws.id]: { ...(prev[ws.id] ?? {}), webhookSecret: e.target.value },
+                                }))
+                              }
+                            />
+                          </div>
+                          <p className="ws-settings-hint" style={{ marginBottom: '0.75rem' }}>
+                            Payment events should POST to <code>/api/webhooks/payment</code> with
+                            <code> workspaceId</code>, <code>userId</code>, <code>accessLevel</code> (2 or 3), and <code>secret</code>.
+                          </p>
+
+                          {paywallGroupsLoading[ws.id] ? (
+                            <p className="ws-settings-hint">Loading groups&hellip;</p>
+                          ) : (paywallAvailGroups[ws.id] ?? []).length === 0 ? (
+                            <p className="ws-settings-hint">No groups found. Check that the workspace Drive folder is set up correctly.</p>
+                          ) : (
+                            <div className="paywall-groups-grid">
+                              <div className="paywall-groups-col">
+                                <p className="ws-settings-label" style={{ marginBottom: '0.375rem' }}>Demo Groups</p>
+                                <p className="ws-settings-hint">Level 1 &mdash; free preview, accessible to all learners.</p>
+                                {(paywallAvailGroups[ws.id] ?? []).map((g) => (
+                                  <label key={g} className="paywall-group-label">
+                                    <input
+                                      type="checkbox"
+                                      checked={(paywallDraft[ws.id]?.demoGroups ?? []).includes(g)}
+                                      onChange={() => togglePaywallGroup(ws.id, g, 'demoGroups')}
+                                    />
+                                    {g === '__root__' ? '(Root \u2014 top-level files)' : g}
+                                  </label>
+                                ))}
+                              </div>
+                              <div className="paywall-groups-col">
+                                <p className="ws-settings-label" style={{ marginBottom: '0.375rem' }}>Level 2 &mdash; Self-Paced</p>
+                                <p className="ws-settings-hint">Requires self-paced subscription.</p>
+                                {(paywallAvailGroups[ws.id] ?? []).map((g) => (
+                                  <label key={g} className="paywall-group-label">
+                                    <input
+                                      type="checkbox"
+                                      checked={(paywallDraft[ws.id]?.level2Groups ?? []).includes(g)}
+                                      onChange={() => togglePaywallGroup(ws.id, g, 'level2Groups')}
+                                    />
+                                    {g === '__root__' ? '(Root \u2014 top-level files)' : g}
+                                  </label>
+                                ))}
+                              </div>
+                              <div className="paywall-groups-col">
+                                <p className="ws-settings-label" style={{ marginBottom: '0.375rem' }}>Level 3 &mdash; Cohort</p>
+                                <p className="ws-settings-hint">Requires cohort subscription (also unlocks Level 2).</p>
+                                {(paywallAvailGroups[ws.id] ?? []).map((g) => (
+                                  <label key={g} className="paywall-group-label">
+                                    <input
+                                      type="checkbox"
+                                      checked={(paywallDraft[ws.id]?.level3Groups ?? []).includes(g)}
+                                      onChange={() => togglePaywallGroup(ws.id, g, 'level3Groups')}
+                                    />
+                                    {g === '__root__' ? '(Root \u2014 top-level files)' : g}
+                                  </label>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                        </>
+                      )}
+
+                      {paywallError[ws.id] && (
+                        <p className="admin-form-error" style={{ marginTop: '0.375rem' }}>
+                          {paywallError[ws.id]}
+                        </p>
+                      )}
+                      <div style={{ marginTop: '0.75rem' }}>
+                        <button
+                          className="admin-btn admin-btn--primary"
+                          onClick={() => savePaywallConfig(ws.id)}
+                          disabled={paywallSaving[ws.id]}
+                        >
+                          {paywallSaving[ws.id] ? 'Saving\u2026' : 'Save Paywall'}
+                        </button>
+                      </div>
+                    </div>
                   </div>
                 )}
               </div>
@@ -895,7 +1224,7 @@ export default function AdminPage() {
       </div>
 
       {activeTab === 'workspaces' && (
-        <WorkspacesSection users={users} getToken={getToken} />
+        <WorkspacesSection users={users} getToken={getToken} refreshUsers={fetchUsers} />
       )}
 
       {activeTab === 'questions' && (

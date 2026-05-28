@@ -37,6 +37,16 @@ const adminApp =
 
 const db = getFirestore(adminApp);
 
+/**
+ * Strips the raw webhookSecret before sending workspace data to clients.
+ * Replaces it with a boolean webhookSecretConfigured flag.
+ */
+function serializeWorkspace(id, data) {
+  if (!data?.paywallConfig) return { id, ...data };
+  const { webhookSecret, ...safePaywallConfig } = data.paywallConfig;
+  return { id, ...data, paywallConfig: { ...safePaywallConfig, webhookSecretConfigured: !!webhookSecret } };
+}
+
 async function verifyTokenClaims(token) {
   const apiKey = process.env.VITE_FIREBASE_API_KEY;
   if (!apiKey) throw Object.assign(new Error('VITE_FIREBASE_API_KEY not set'), { status: 500 });
@@ -87,7 +97,7 @@ export default async function handler(req, res) {
         : await col.where('userIds', 'array-contains', claims.uid).get();
 
       const workspaces = snap.docs
-        .map((d) => ({ id: d.id, ...d.data() }))
+        .map((d) => serializeWorkspace(d.id, d.data()))
         .sort((a, b) => (a.name ?? '').localeCompare(b.name ?? ''));
       return res.json(workspaces);
     } catch (e) {
@@ -191,12 +201,49 @@ export default async function handler(req, res) {
         }
         updates.linkedInUrl = val ?? null;
       }
+      if ('paywallConfig' in (req.body ?? {})) {
+        const pc = req.body.paywallConfig;
+        if (pc === null) {
+          updates.paywallConfig = null;
+        } else if (typeof pc === 'object' && !Array.isArray(pc)) {
+          const { enabled, level2PaymentUrl, level3PaymentUrl, webhookSecret, level2Groups, level3Groups, demoGroups } = pc;
+          if (typeof enabled !== 'boolean') {
+            return res.status(400).json({ error: 'paywallConfig.enabled must be a boolean' });
+          }
+          if (level2PaymentUrl != null && typeof level2PaymentUrl !== 'string') {
+            return res.status(400).json({ error: 'paywallConfig.level2PaymentUrl must be a string or null' });
+          }
+          if (level3PaymentUrl != null && typeof level3PaymentUrl !== 'string') {
+            return res.status(400).json({ error: 'paywallConfig.level3PaymentUrl must be a string or null' });
+          }
+          if (!Array.isArray(level2Groups) || !Array.isArray(level3Groups) || !Array.isArray(demoGroups)) {
+            return res.status(400).json({ error: 'paywallConfig.level2Groups, level3Groups, and demoGroups must be arrays' });
+          }
+          // Preserve existing webhookSecret if not provided in this request
+          let resolvedWebhookSecret = (typeof webhookSecret === 'string' && webhookSecret.trim()) ? webhookSecret.trim() : null;
+          if (!resolvedWebhookSecret) {
+            const existing = await ref.get();
+            resolvedWebhookSecret = existing.data()?.paywallConfig?.webhookSecret ?? null;
+          }
+          updates.paywallConfig = {
+            enabled: enabled === true,
+            level2PaymentUrl: level2PaymentUrl ?? null,
+            level3PaymentUrl: level3PaymentUrl ?? null,
+            webhookSecret: resolvedWebhookSecret,
+            level2Groups: level2Groups.filter((g) => typeof g === 'string'),
+            level3Groups: level3Groups.filter((g) => typeof g === 'string'),
+            demoGroups: demoGroups.filter((g) => typeof g === 'string'),
+          };
+        } else {
+          return res.status(400).json({ error: 'paywallConfig must be an object or null' });
+        }
+      }
       if (addUser) updates.userIds = FieldValue.arrayUnion(addUser);
       if (removeUser) updates.userIds = FieldValue.arrayRemove(removeUser);
 
       await ref.update(updates);
       const updated = await ref.get();
-      return res.json({ id, ...updated.data() });
+      return res.json(serializeWorkspace(id, updated.data()));
     } catch (e) {
       console.error('[api/workspaces PATCH]', e.message);
       return res.status(500).json({ error: e.message });

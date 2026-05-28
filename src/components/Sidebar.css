@@ -273,6 +273,44 @@
 .file-type-dot[data-type="toolkit"]  { background: var(--color-success); }
 .file-type-dot[data-type="analysis"] { background: var(--color-purple); }
 
+/* ── Paywall / locked state ─────────────────────────────────────────────── */
+.file-btn--locked {
+  opacity: 0.55;
+  cursor: pointer;
+}
+.file-btn--locked:hover {
+  opacity: 0.8;
+  background: rgba(255, 59, 48, 0.08);
+}
+.file-lock-icon {
+  font-size: 0.7rem;
+  flex-shrink: 0;
+  line-height: 1;
+}
+.module-paywall-badge {
+  font-size: 0.6rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  padding: 0.1em 0.35em;
+  border-radius: 3px;
+  margin-left: 0.25rem;
+  line-height: 1.4;
+  vertical-align: middle;
+}
+.module-paywall-badge--level2 {
+  background: rgba(255, 159, 10, 0.15);
+  color: #ff9f0a;
+}
+
+.module-paywall-badge--level3 {
+  background: rgba(191, 90, 242, 0.15);
+  color: #bf5af2;
+}
+.module-paywall-badge--demo {
+  background: rgba(52, 199, 89, 0.15);
+  color: #34c759;
+}
+
 .sidebar-empty {
   color: var(--text-muted);
   font-size: 0.8125rem;

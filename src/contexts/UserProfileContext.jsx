@@ -29,7 +29,7 @@ export function UserProfileProvider({ children }) {
   }, [refreshProfile]);
 
   return (
-    <UserProfileContext.Provider value={{ profile, profileLoading, refreshProfile }}>
+    <UserProfileContext.Provider value={{ profile, profileLoading, refreshProfile, paidWorkspaces: profile?.paidWorkspaces ?? {} }}>
       {children}
     </UserProfileContext.Provider>
   );

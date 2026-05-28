@@ -2,6 +2,8 @@ import { useMemo, useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useWorkspace } from '../contexts/WorkspaceContext';
+import { useUserProfile } from '../contexts/UserProfileContext';
+import { canAccessGroup, getGroupAccess } from '../utils/paywallAccess';
 import { createDocument, renameDocument } from '../hooks/useDocuments';
 import './Sidebar.css';
 
@@ -55,6 +57,8 @@ export default function Sidebar({ documents, loading = false, onRefresh, onDocum
 
   const canEdit = role === 'admin' || role === 'editor';
   const { currentWorkspace, activeTags, activeAssetTypes } = useWorkspace();
+  const { paidWorkspaces } = useUserProfile();
+  const paywallConfig = currentWorkspace?.paywallConfig ?? null;
   const workspaceFolderId = currentWorkspace?.driveFolderId ?? null;
 
   /** Build the /api/folders URL, optionally scoped to the current workspace root. */
@@ -218,7 +222,13 @@ export default function Sidebar({ documents, loading = false, onRefresh, onDocum
       </div>
 
       <nav className="sidebar-nav">
-        {sortedModules.map((key) => (
+      {sortedModules.map((key) => {
+        const isGroupLocked = role === 'learner' && !canAccessGroup(key, paywallConfig, paidWorkspaces, currentWorkspace?.id);
+        const groupAccessLevel = role === 'learner' ? getGroupAccess(key, paywallConfig) : 'open';
+        const groupPaymentUrl = groupAccessLevel === 'level3'
+          ? (paywallConfig?.level3PaymentUrl ?? null)
+          : (paywallConfig?.level2PaymentUrl ?? null);
+        return (
           <div key={key} className="module-group">
             {key === '__root__' ? (
               <ul className="module-files">
@@ -242,14 +252,18 @@ export default function Sidebar({ documents, loading = false, onRefresh, onDocum
                     ) : (
                       <div className="file-row">
                         <button
-                          className={`file-btn ${doc.id === activeId ? 'active' : ''}`}
-                          onClick={() => navigate(`/file/${doc.id}`)}
-                          title={doc.title}
+                          className={`file-btn ${!isGroupLocked && doc.id === activeId ? 'active' : ''} ${isGroupLocked ? 'file-btn--locked' : ''}`}
+                          onClick={isGroupLocked
+                            ? () => { if (groupPaymentUrl) window.open(groupPaymentUrl, '_blank', 'noopener,noreferrer'); }
+                            : () => navigate(`/file/${doc.id}`)}
+                          title={isGroupLocked ? `${doc.title ?? doc.id} — Requires subscription` : doc.title}
                         >
-                          <span className="file-type-dot" data-type={inferType(doc)} />
+                          {isGroupLocked
+                            ? <span className="file-lock-icon">🔒</span>
+                            : <span className="file-type-dot" data-type={inferType(doc)} />}
                           <span className="file-name">{doc.title ?? doc.id}</span>
                         </button>
-                        {canEdit && doc.mimeType !== 'application/vnd.google-apps.document' && (
+                        {canEdit && !isGroupLocked && doc.mimeType !== 'application/vnd.google-apps.document' && (
                           <button
                             className="rename-btn"
                             onClick={() => startRename(doc)}
@@ -275,6 +289,10 @@ export default function Sidebar({ documents, loading = false, onRefresh, onDocum
                   >
                     <span className={`chevron ${collapsed[key] ? '' : 'open'}`}>›</span>
                     <span className="module-name">{moduleLabel(key)}</span>
+                    {isGroupLocked && (
+                      <span className={`module-paywall-badge ${groupAccessLevel === 'level3' ? 'module-paywall-badge--level3' : 'module-paywall-badge--level2'}`}>🔒</span>
+                    )}
+                    {groupAccessLevel === 'demo' && <span className="module-paywall-badge module-paywall-badge--demo">FREE</span>}
                     <span className="module-count">{grouped[key].length}</span>
                   </button>
                   {canEdit && (
@@ -310,14 +328,18 @@ export default function Sidebar({ documents, loading = false, onRefresh, onDocum
                     ) : (
                       <div className="file-row">
                         <button
-                          className={`file-btn ${doc.id === activeId ? 'active' : ''}`}
-                          onClick={() => navigate(`/file/${doc.id}`)}
-                          title={doc.title}
+                          className={`file-btn ${!isGroupLocked && doc.id === activeId ? 'active' : ''} ${isGroupLocked ? 'file-btn--locked' : ''}`}
+                          onClick={isGroupLocked
+                            ? () => { if (groupPaymentUrl) window.open(groupPaymentUrl, '_blank', 'noopener,noreferrer'); }
+                            : () => navigate(`/file/${doc.id}`)}
+                          title={isGroupLocked ? `${doc.title ?? doc.id} — Requires subscription` : doc.title}
                         >
-                          <span className="file-type-dot" data-type={inferType(doc)} />
+                          {isGroupLocked
+                            ? <span className="file-lock-icon">🔒</span>
+                            : <span className="file-type-dot" data-type={inferType(doc)} />}
                           <span className="file-name">{doc.title ?? doc.id}</span>
                         </button>
-                        {canEdit && doc.mimeType !== 'application/vnd.google-apps.document' && (
+                        {canEdit && !isGroupLocked && doc.mimeType !== 'application/vnd.google-apps.document' && (
                           <button
                             className="rename-btn"
                             onClick={() => startRename(doc)}
@@ -338,7 +360,8 @@ export default function Sidebar({ documents, loading = false, onRefresh, onDocum
               </>
             )}
           </div>
-        ))}
+        );
+      })}
 
         {loading && sortedModules.length === 0 && (
           <p className="sidebar-empty">Loading…</p>

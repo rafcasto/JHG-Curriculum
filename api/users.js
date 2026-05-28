@@ -1,17 +1,17 @@
 /**
- * GET    /api/users           — list all users (via Firebase Auth listUsers)
- * POST   /api/users           — create user  { email, password, role }
- * PATCH  /api/users?uid=<uid> — update role  { role }
- * DELETE /api/users?uid=<uid> — delete user
+ * GET    /api/users                         — list all users (includes paidWorkspaces)
+ * POST   /api/users                         — create user  { email, password, role }
+ * PATCH  /api/users?uid=<uid>               — update role  { role }
+ * PATCH  /api/users?uid=<uid>               — set workspace access  { workspaceId, accessLevel: 0|2|3 }
+ * DELETE /api/users?uid=<uid>               — delete user
  *
  * Roles are stored as Firebase Auth custom claims { role: 'admin'|'editor'|'viewer' }.
- * No Firestore required.
  * All methods require Authorization: Bearer <firebase-id-token> from an admin.
  */
 
 import { initializeApp, cert, getApps, getApp } from 'firebase-admin/app';
 import { getAuth } from 'firebase-admin/auth';
-import { getFirestore } from 'firebase-admin/firestore';
+import { getFirestore, FieldValue } from 'firebase-admin/firestore';
 
 const serviceAccount = {
   type: process.env.GOOGLE_TYPE,
@@ -155,11 +155,21 @@ export default async function handler(req, res) {
   if (req.method === 'GET') {
     try {
       const result = await adminAuth.listUsers(1000);
+
+      // Batch-fetch userProfiles to include paidWorkspaces
+      const profileRefs = result.users.map((u) => db.collection('userProfiles').doc(u.uid));
+      const profileSnaps = profileRefs.length > 0 ? await db.getAll(...profileRefs) : [];
+      const profileMap = {};
+      profileSnaps.forEach((snap, i) => {
+        profileMap[result.users[i].uid] = snap.data() ?? {};
+      });
+
       const users = result.users.map((u) => ({
         uid: u.uid,
         email: u.email ?? '',
         role: u.customClaims?.role ?? 'viewer',
         createdAt: u.metadata.creationTime,
+        paidWorkspaces: profileMap[u.uid]?.paidWorkspaces ?? {},
       }));
       users.sort((a, b) => a.email.localeCompare(b.email));
       return res.json(users);
@@ -199,11 +209,43 @@ export default async function handler(req, res) {
     }
   }
 
-  // ── PATCH: update role ─────────────────────────────────────────────────────
+  // ── PATCH: update role or workspace access level ──────────────────────────
   if (req.method === 'PATCH') {
     const { uid } = req.query;
-    const { role } = req.body ?? {};
     if (!uid) return res.status(400).json({ error: 'Missing ?uid parameter' });
+
+    const body = req.body ?? {};
+
+    // ── Set workspace access level ─────────────────────────────────────────
+    if ('workspaceId' in body) {
+      const { workspaceId, accessLevel } = body;
+      if (!workspaceId || typeof workspaceId !== 'string') {
+        return res.status(400).json({ error: 'workspaceId must be a non-empty string' });
+      }
+      if (accessLevel !== 0 && accessLevel !== 2 && accessLevel !== 3) {
+        return res.status(400).json({ error: 'accessLevel must be 0 (revoke), 2 (self-paced), or 3 (cohort)' });
+      }
+      try {
+        const userRef = db.collection('userProfiles').doc(uid);
+        if (accessLevel === 0) {
+          await userRef.update({ [`paidWorkspaces.${workspaceId}`]: FieldValue.delete() });
+        } else {
+          await userRef.set(
+            { paidWorkspaces: { [workspaceId]: accessLevel } },
+            { mergeFields: [`paidWorkspaces.${workspaceId}`] }
+          );
+        }
+        return res.json({ ok: true });
+      } catch (e) {
+        // Document not found — nothing to revoke, treat as success
+        if (e.code === 5 || e.message?.includes('NOT_FOUND')) return res.json({ ok: true });
+        console.error('[api/users PATCH access]', e.message);
+        return res.status(500).json({ error: e.message });
+      }
+    }
+
+    // ── Update role ────────────────────────────────────────────────────────
+    const { role } = body;
     if (!role || !VALID_ROLES.includes(role)) {
       return res.status(400).json({ error: `role must be one of: ${VALID_ROLES.join(', ')}` });
     }

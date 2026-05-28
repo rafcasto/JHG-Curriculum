@@ -6,6 +6,8 @@ import remarkGfm from 'remark-gfm';
 import rehypeCollapsibleHeadings from '../utils/rehypeCollapsibleHeadings';
 import { useAuth } from '../contexts/AuthContext';
 import { useWorkspace } from '../contexts/WorkspaceContext';
+import { useUserProfile } from '../contexts/UserProfileContext';
+import { canAccessGroup, getGroupAccess } from '../utils/paywallAccess';
 import { fetchDocument, saveDocument, deleteDocument } from '../hooks/useDocuments';
 import { getOrderedDocuments, getLockedDocumentIds } from '../utils/reviewOrder';
 import RichTextEditor from '../components/RichTextEditor';
@@ -166,6 +168,7 @@ export default function FilePage() {
   const { user, role } = useAuth();
   const { currentWorkspace } = useWorkspace();
   const workspaceId = currentWorkspace?.id ?? null;
+  const { paidWorkspaces } = useUserProfile();
   const { refreshDocuments, onReviewSubmissionUpdated, reviewDocs = [], reviewSubmissions = {} } = useOutletContext() ?? {};
 
   const [doc, setDoc] = useState(null);
@@ -474,6 +477,11 @@ export default function FilePage() {
       : null;
   const isLastDoc = currentDocIndex > -1 && currentDocIndex === orderedDocs.length - 1;
 
+  const docGroup = useMemo(() => {
+    const p = doc?.path ?? '';
+    return p.includes('/') ? p.split('/')[0] : '__root__';
+  }, [doc]);
+
   function handlePrev() {
     if (prevDoc) navigate(`/file/${prevDoc.driveFileId}`);
   }
@@ -559,6 +567,40 @@ export default function FilePage() {
       <div className="file-error">
         <p>{error}</p>
         <button onClick={() => navigate(-1)}>← Go back</button>
+      </div>
+    );
+  }
+
+  if (role === 'learner' && doc && !canAccessGroup(docGroup, currentWorkspace?.paywallConfig ?? null, paidWorkspaces, workspaceId)) {
+    const paywallConfig = currentWorkspace?.paywallConfig ?? null;
+    const groupTier = getGroupAccess(docGroup, paywallConfig);
+    const paymentUrl = groupTier === 'level3'
+      ? paywallConfig?.level3PaymentUrl
+      : paywallConfig?.level2PaymentUrl;
+    const groupLabel = docGroup === '__root__' ? 'This content' : docGroup;
+    const tierLabel = groupTier === 'level3' ? 'Cohort Program' : 'Self-Paced Program';
+    return (
+      <div className="paywall-overlay">
+        <div className="paywall-card">
+          <span className="paywall-icon" aria-hidden="true">🔒</span>
+          <h2 className="paywall-title">{groupLabel}</h2>
+          <p className="paywall-description">
+            This content is part of the <strong>{tierLabel}</strong> and requires a subscription to access.
+          </p>
+          {paymentUrl ? (
+            <a
+              className="paywall-cta"
+              href={paymentUrl}
+              target="_blank"
+              rel="noreferrer"
+            >
+              Get Access →
+            </a>
+          ) : (
+            <p className="paywall-no-url">Payment information coming soon.</p>
+          )}
+          <button className="paywall-back" onClick={() => navigate(-1)}>← Go back</button>
+        </div>
       </div>
     );
   }
