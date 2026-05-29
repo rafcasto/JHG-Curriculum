@@ -13,6 +13,7 @@
  * Write methods additionally require the admin custom claim.
  */
 
+import crypto from 'crypto';
 import { initializeApp, cert, getApps, getApp } from 'firebase-admin/app';
 import { getFirestore, FieldValue } from 'firebase-admin/firestore';
 
@@ -225,11 +226,10 @@ export default async function handler(req, res) {
           if (!Array.isArray(level2Groups) || !Array.isArray(level3Groups) || !Array.isArray(demoGroups)) {
             return res.status(400).json({ error: 'paywallConfig.level2Groups, level3Groups, and demoGroups must be arrays' });
           }
-          // Preserve existing webhookSecret if not provided in this request
+          // Preserve existing webhookSecret; auto-generate a secure random key if none exists
           let resolvedWebhookSecret = (typeof webhookSecret === 'string' && webhookSecret.trim()) ? webhookSecret.trim() : null;
           if (!resolvedWebhookSecret) {
-            const existing = await ref.get();
-            resolvedWebhookSecret = existing.data()?.paywallConfig?.webhookSecret ?? null;
+            resolvedWebhookSecret = snap.data()?.paywallConfig?.webhookSecret ?? crypto.randomBytes(32).toString('hex');
           }
           updates.paywallConfig = {
             enabled: enabled === true,
@@ -238,7 +238,9 @@ export default async function handler(req, res) {
             selfPacedProductId: selfPacedProductId ?? null,
             cohortProductId: cohortProductId ?? null,
             webhookSecret: resolvedWebhookSecret,
-            zapierWebhookUrl: (typeof zapierWebhookUrl === 'string' && zapierWebhookUrl.trim()) ? zapierWebhookUrl.trim() : null,
+            zapierWebhookUrl: (typeof zapierWebhookUrl === 'string' && zapierWebhookUrl.trim())
+              ? zapierWebhookUrl.trim()
+              : (snap.data()?.paywallConfig?.zapierWebhookUrl ?? `${req.headers['x-forwarded-proto'] ?? 'https'}://${req.headers['x-forwarded-host'] ?? req.headers.host}/api/webhooks/payment`),
             level2Groups: level2Groups.filter((g) => typeof g === 'string'),
             level3Groups: level3Groups.filter((g) => typeof g === 'string'),
             demoGroups: demoGroups.filter((g) => typeof g === 'string'),
