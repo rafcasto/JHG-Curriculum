@@ -193,6 +193,7 @@ export default function FilePage() {
   const [submission, setSubmission] = useState(null);
   const [submissionChecked, setSubmissionChecked] = useState(false);
   const [hasPreQuestions, setHasPreQuestions] = useState(null); // null = loading
+  const [learnerCompleting, setLearnerCompleting] = useState(false);
 
   // Reviewer modal state
   const [showPreSurveyModal, setShowPreSurveyModal] = useState(false);
@@ -488,6 +489,8 @@ export default function FilePage() {
 
   // Learner: silently create + immediately complete a submission, then navigate.
   async function handleLearnerComplete(nextPath) {
+    if (learnerCompleting) return;
+    setLearnerCompleting(true);
     try {
       const token = await user.getIdToken();
       let sub = submission;
@@ -522,6 +525,7 @@ export default function FilePage() {
     } catch (e) {
       console.error('[learner complete]', e.message);
     } finally {
+      setLearnerCompleting(false);
       navigate(nextPath);
     }
   }
@@ -926,20 +930,20 @@ export default function FilePage() {
               <button
                 className="fp-nav-btn fp-nav-btn--complete"
                 onClick={handleContinue}
-                disabled={isUnreviewed}
+                disabled={isUnreviewed || learnerCompleting}
                 title={isUnreviewed ? 'Start the review first' : undefined}
               >
-                Complete ✓
+                {role === 'learner' ? 'Mark as Complete' : 'Complete ✓'}
               </button>
             )
           ) : (
             <button
               className="fp-nav-btn fp-nav-btn--continue"
               onClick={handleContinue}
-              disabled={isUnreviewed || (role === 'reviewer' && !submissionChecked)}
+              disabled={isUnreviewed || learnerCompleting || (role === 'reviewer' && !submissionChecked)}
               title={isUnreviewed ? 'Start the review first' : undefined}
             >
-              Continue →
+              {role === 'learner' ? 'Mark as Complete' : 'Continue →'}
             </button>
           )}
         </div>
