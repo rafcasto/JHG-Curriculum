@@ -167,8 +167,9 @@ function WorkspacesSection({ users, getToken, refreshUsers }) {
           paywallConfig: {
             enabled: draft.enabled,
             registrationEnabled: draft.registrationEnabled,
-            level2PaymentUrl: draft.level2PaymentUrl?.trim() || null,
-            level3PaymentUrl: draft.level3PaymentUrl?.trim() || null,
+            paymentUrl: draft.paymentUrl?.trim() || null,
+            selfPacedProductId: draft.selfPacedProductId?.trim() || null,
+            cohortProductId: draft.cohortProductId?.trim() || null,
             ...(draft.webhookSecret.trim() ? { webhookSecret: draft.webhookSecret.trim() } : {}),
             zapierWebhookUrl: draft.zapierWebhookUrl?.trim() || null,
             demoGroups: draft.demoGroups,
