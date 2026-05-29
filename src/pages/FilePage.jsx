@@ -455,6 +455,7 @@ export default function FilePage() {
   const isUnreviewed   = role === 'reviewer' && submissionChecked && !submission;
   const isReviewing    = role === 'reviewer' && submission?.status === 'draft';
   const isReviewComplete = role === 'reviewer' && submission?.status === 'complete';
+  const isLearnerLessonComplete = role === 'learner' && submission?.status === 'complete';
 
   // Sequential review: is this document locked?
   const isLocked = useMemo(() => {
@@ -919,7 +920,7 @@ export default function FilePage() {
             </span>
           )}
           {isLastDoc ? (
-            isReviewComplete ? (
+            (isReviewComplete || isLearnerLessonComplete) ? (
               <button
                 className="fp-nav-btn fp-nav-btn--done"
                 onClick={() => navigate('/review')}
@@ -943,7 +944,7 @@ export default function FilePage() {
               disabled={isUnreviewed || learnerCompleting || (role === 'reviewer' && !submissionChecked)}
               title={isUnreviewed ? 'Start the review first' : undefined}
             >
-              {role === 'learner' ? 'Mark as Complete' : 'Continue →'}
+              {role === 'learner' && !isLearnerLessonComplete ? 'Mark as Complete' : 'Continue →'}
             </button>
           )}
         </div>
