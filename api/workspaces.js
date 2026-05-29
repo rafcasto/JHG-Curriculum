@@ -206,7 +206,7 @@ export default async function handler(req, res) {
         if (pc === null) {
           updates.paywallConfig = null;
         } else if (typeof pc === 'object' && !Array.isArray(pc)) {
-          const { enabled, registrationEnabled, paymentUrl, selfPacedProductId, cohortProductId, webhookSecret, level2Groups, level3Groups, demoGroups } = pc;
+          const { enabled, registrationEnabled, paymentUrl, selfPacedProductId, cohortProductId, webhookSecret, zapierWebhookUrl, level2Groups, level3Groups, demoGroups } = pc;
           if (typeof enabled !== 'boolean') {
             return res.status(400).json({ error: 'paywallConfig.enabled must be a boolean' });
           }
@@ -218,6 +218,9 @@ export default async function handler(req, res) {
           }
           if (cohortProductId != null && typeof cohortProductId !== 'string') {
             return res.status(400).json({ error: 'paywallConfig.cohortProductId must be a string or null' });
+          }
+          if (zapierWebhookUrl != null && typeof zapierWebhookUrl !== 'string') {
+            return res.status(400).json({ error: 'paywallConfig.zapierWebhookUrl must be a string or null' });
           }
           if (!Array.isArray(level2Groups) || !Array.isArray(level3Groups) || !Array.isArray(demoGroups)) {
             return res.status(400).json({ error: 'paywallConfig.level2Groups, level3Groups, and demoGroups must be arrays' });
@@ -235,6 +238,7 @@ export default async function handler(req, res) {
             selfPacedProductId: selfPacedProductId ?? null,
             cohortProductId: cohortProductId ?? null,
             webhookSecret: resolvedWebhookSecret,
+            zapierWebhookUrl: (typeof zapierWebhookUrl === 'string' && zapierWebhookUrl.trim()) ? zapierWebhookUrl.trim() : null,
             level2Groups: level2Groups.filter((g) => typeof g === 'string'),
             level3Groups: level3Groups.filter((g) => typeof g === 'string'),
             demoGroups: demoGroups.filter((g) => typeof g === 'string'),

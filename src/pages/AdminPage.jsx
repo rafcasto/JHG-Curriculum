@@ -126,6 +126,7 @@ function WorkspacesSection({ users, getToken, refreshUsers }) {
             selfPacedProductId: pc.selfPacedProductId ?? '',
             cohortProductId: pc.cohortProductId ?? '',
             webhookSecret: '', // never pre-filled (write-only from the client)
+            zapierWebhookUrl: pc.zapierWebhookUrl ?? '',
             demoGroups: pc.demoGroups ?? [],
             level2Groups: pc.level2Groups ?? [],
             level3Groups: pc.level3Groups ?? [],
@@ -166,9 +167,10 @@ function WorkspacesSection({ users, getToken, refreshUsers }) {
           paywallConfig: {
             enabled: draft.enabled,
             registrationEnabled: draft.registrationEnabled,
-            level2PaymentUrl: draft.level2PaymentUrl.trim() || null,
-            level3PaymentUrl: draft.level3PaymentUrl.trim() || null,
+            level2PaymentUrl: draft.level2PaymentUrl?.trim() || null,
+            level3PaymentUrl: draft.level3PaymentUrl?.trim() || null,
             ...(draft.webhookSecret.trim() ? { webhookSecret: draft.webhookSecret.trim() } : {}),
+            zapierWebhookUrl: draft.zapierWebhookUrl?.trim() || null,
             demoGroups: draft.demoGroups,
             level2Groups: draft.level2Groups,
             level3Groups: draft.level3Groups,
@@ -1036,7 +1038,7 @@ function WorkspacesSection({ users, getToken, refreshUsers }) {
                               }
                             />
                           </div>
-                          <div className="ws-settings-input-row" style={{ marginBottom: '1rem' }}>
+                          <div className="ws-settings-input-row" style={{ marginBottom: '0.5rem' }}>
                             <input
                               className="admin-input"
                               type="password"
@@ -1055,9 +1057,24 @@ function WorkspacesSection({ users, getToken, refreshUsers }) {
                               }
                             />
                           </div>
+                          <div className="ws-settings-input-row" style={{ marginBottom: '1rem' }}>
+                            <input
+                              className="admin-input"
+                              type="url"
+                              placeholder="Zapier webhook URL (called after successful purchase)"
+                              value={paywallDraft[ws.id]?.zapierWebhookUrl ?? ''}
+                              onChange={(e) =>
+                                setPaywallDraft((prev) => ({
+                                  ...prev,
+                                  [ws.id]: { ...(prev[ws.id] ?? {}), zapierWebhookUrl: e.target.value },
+                                }))
+                              }
+                            />
+                          </div>
                           <p className="ws-settings-hint" style={{ marginBottom: '0.75rem' }}>
                             Payment events should POST to <code>/api/webhooks/payment</code> with
                             <code> workspaceId</code>, <code>productId</code>, and <code>secret</code>.
+                            The Zapier webhook URL above is called by this app after each successful purchase.
                           </p>
 
                           {paywallGroupsLoading[ws.id] ? (

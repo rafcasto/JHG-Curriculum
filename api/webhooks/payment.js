@@ -189,7 +189,25 @@ export default async function handler(req, res) {
   // Grant workspace access
   try {
     await grantAccess(workspaceId, uid, email, displayName, accessLevel);
-    console.log(`[api/webhooks/payment] Granted level ${accessLevel} (productId=${productId}): user=${uid} (${email}) workspace=${workspaceId} created=${created}`);}
+    console.log(`[api/webhooks/payment] Granted level ${accessLevel} (productId=${productId}): user=${uid} (${email}) workspace=${workspaceId} created=${created}`);
+
+    // Fire outgoing Zapier webhook if configured (best-effort, non-blocking)
+    const zapierWebhookUrl = wsData?.paywallConfig?.zapierWebhookUrl;
+    if (zapierWebhookUrl) {
+      fetch(zapierWebhookUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email,
+          name: displayName ?? null,
+          workspaceId,
+          accessLevel,
+          userId: uid,
+          created,
+        }),
+      }).catch((err) => console.error('[api/webhooks/payment] Zapier outgoing webhook failed:', err.message));
+    }
+
     return res.status(200).json({ ok: true, userId: uid, created });
   } catch (e) {
     console.error('[api/webhooks/payment] grantAccess failed:', e.message);
