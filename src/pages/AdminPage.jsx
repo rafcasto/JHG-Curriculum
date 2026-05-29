@@ -126,7 +126,7 @@ function WorkspacesSection({ users, getToken, refreshUsers }) {
             selfPacedProductId: pc.selfPacedProductId ?? '',
             cohortProductId: pc.cohortProductId ?? '',
             webhookSecret: '', // never pre-filled (write-only from the client)
-            zapierWebhookUrl: pc.zapierWebhookUrl ?? '',
+            zapierWebhookUrl: pc.zapierWebhookUrl ?? `${window.location.origin}/api/webhooks/payment`,
             demoGroups: pc.demoGroups ?? [],
             level2Groups: pc.level2Groups ?? [],
             level3Groups: pc.level3Groups ?? [],
@@ -1045,7 +1045,7 @@ function WorkspacesSection({ users, getToken, refreshUsers }) {
                               placeholder={
                                 ws.paywallConfig?.webhookSecretConfigured
                                   ? '\u25cf Webhook secret configured \u2014 enter new value to change'
-                                  : 'Webhook secret (used to authenticate payment events)'
+                                  : 'Auto-generated on save (or enter your own)'
                               }
                               value={paywallDraft[ws.id]?.webhookSecret ?? ''}
                               autoComplete="new-password"
