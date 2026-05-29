@@ -1,6 +1,9 @@
 import { useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useWorkspace } from '../contexts/WorkspaceContext';
+import { useAuth } from '../contexts/AuthContext';
+import { useUserProfile } from '../contexts/UserProfileContext';
+import { canAccessGroup, getGroupAccess } from '../utils/paywallAccess';
 import { getOrderedDocuments, getLockedDocumentIds } from '../utils/reviewOrder';
 import './ReviewerSidebar.css';
 
@@ -42,6 +45,10 @@ export default function ReviewerSidebar({ documents = [], submissions = {}, load
   const [search, setSearch] = useState('');
   const [collapsed, setCollapsed] = useState({});
   const { currentWorkspace } = useWorkspace();
+  const { role } = useAuth();
+  const { paidWorkspaces } = useUserProfile();
+  const paywallConfig = currentWorkspace?.paywallConfig ?? null;
+  const workspaceId = currentWorkspace?.id ?? null;
   const enforceSequential = currentWorkspace?.enforceSequentialReview ?? false;
 
   // Use the submissions prop — useOutletContext() does NOT work here because
@@ -104,12 +111,23 @@ export default function ReviewerSidebar({ documents = [], submissions = {}, load
           <p className="rsb-empty">No documents assigned yet.</p>
         )}
 
-        {sortedGroups.map((key) => (
+        {sortedGroups.map((key) => {
+          const isGroupPaywallLocked = role === 'learner' && !canAccessGroup(key, paywallConfig, paidWorkspaces, workspaceId);
+          const groupAccessLevel = role === 'learner' ? getGroupAccess(key, paywallConfig) : 'open';
+          const paymentUrl = paywallConfig?.paymentUrl ?? null;
+
+          return (
           <div key={key} className="rsb-group">
             {key !== '__root__' && (
               <button className="rsb-group-header" onClick={() => toggle(key)}>
                 <span className={`rsb-chevron${collapsed[key] ? '' : ' open'}`}>›</span>
                 <span className="rsb-group-name">{folderLabel(key)}</span>
+                {isGroupPaywallLocked && (
+                  <span className="rsb-badge rsb-status--locked">🔒</span>
+                )}
+                {groupAccessLevel === 'demo' && (
+                  <span className="rsb-badge rsb-paywall-demo">FREE</span>
+                )}
                 <span className="rsb-group-count">{grouped[key].length}</span>
               </button>
             )}
@@ -118,8 +136,10 @@ export default function ReviewerSidebar({ documents = [], submissions = {}, load
               <ul className="rsb-file-list">
                 {grouped[key].map((doc) => {
                   const sub = submissions[doc.driveFileId];
-                  const isLocked = enforceSequential && lockedIds.has(doc.driveFileId);
-                  const status = isLocked ? 'not_started' : submissionStatus(sub);
+                  const isSeqLocked = enforceSequential && lockedIds.has(doc.driveFileId);
+                  // Paywall lock takes priority over sequential lock
+                  const isLocked = isGroupPaywallLocked || isSeqLocked;
+                  const status = isSeqLocked ? 'not_started' : submissionStatus(sub);
                   const meta = STATUS_META[status];
                   const isActive = doc.driveFileId === activeId;
                   // Frontier doc: sequential mode, not locked, not yet complete → show open lock
@@ -129,16 +149,30 @@ export default function ReviewerSidebar({ documents = [], submissions = {}, load
                     <li key={doc.id}>
                       <button
                         className={`rsb-file-btn${isActive ? ' active' : ''}${isLocked ? ' rsb-file-btn--locked' : ''}`}
-                        onClick={() => !isLocked && navigate(`/file/${doc.driveFileId}`)}
-                        disabled={isLocked}
-                        title={isLocked ? 'Complete the previous document first' : undefined}
+                        onClick={() => {
+                          if (isGroupPaywallLocked) {
+                            if (paymentUrl) window.open(paymentUrl, '_blank', 'noopener,noreferrer');
+                          } else if (!isSeqLocked) {
+                            navigate(`/file/${doc.driveFileId}`);
+                          }
+                        }}
+                        disabled={isSeqLocked && !isGroupPaywallLocked}
+                        title={
+                          isGroupPaywallLocked
+                            ? `${doc.title ?? doc.driveFileId} — Requires subscription`
+                            : isSeqLocked
+                              ? 'Complete the previous document first'
+                              : undefined
+                        }
                       >
                         <span className="rsb-file-name">{doc.title}</span>
-                        {isLocked
+                        {isGroupPaywallLocked
                           ? <span className="rsb-badge rsb-status--locked">🔒</span>
-                          : isFrontier
-                            ? <span className="rsb-badge rsb-status--frontier">🔓</span>
-                            : <span className={`rsb-badge ${meta.className}`}>{meta.label}</span>
+                          : isSeqLocked
+                            ? <span className="rsb-badge rsb-status--locked">🔒</span>
+                            : isFrontier
+                              ? <span className="rsb-badge rsb-status--frontier">🔓</span>
+                              : <span className={`rsb-badge ${meta.className}`}>{meta.label}</span>
                         }
                       </button>
                     </li>
@@ -147,7 +181,8 @@ export default function ReviewerSidebar({ documents = [], submissions = {}, load
               </ul>
             )}
           </div>
-        ))}
+          );
+        })}
       </nav>
     </aside>
   );
