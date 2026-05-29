@@ -394,18 +394,27 @@ export default async function handler(req, res) {
 
       // ── Badge award logic (non-critical) ────────────────────────────────
       try {
+        console.log('[badge-debug] Starting badge check for submissionId:', submissionId, '| documentId:', submission.documentId, '| userId:', claims.uid);
+
         // Find the Firestore document record for this driveFileId
         const docsByDriveId = await db.collection('documents')
           .where('driveFileId', '==', submission.documentId)
           .limit(1)
           .get();
 
-        if (!docsByDriveId.empty) {
+        if (docsByDriveId.empty) {
+          console.log('[badge-debug] SKIP: No Firestore document record found for driveFileId:', submission.documentId);
+        } else {
           const docRecord = docsByDriveId.docs[0].data();
           const moduleKey = docRecord.moduleKey ?? null;
           const workspaceId = docRecord.workspaceId ?? null;
+          console.log('[badge-debug] Document found | moduleKey:', moduleKey, '| workspaceId:', workspaceId, '| status:', docRecord.status);
 
-          if (moduleKey && workspaceId) {
+          if (!moduleKey) {
+            console.log('[badge-debug] SKIP: moduleKey is null/empty on document. Set a moduleKey on this document to enable badge awarding.');
+          } else if (!workspaceId) {
+            console.log('[badge-debug] SKIP: workspaceId is null/empty on document.');
+          } else {
             // Fetch all workspace documents that have a moduleKey set
             const allWorkspaceDocsSnap = await db.collection('documents')
               .where('workspaceId', '==', workspaceId)
@@ -420,6 +429,9 @@ export default async function handler(req, res) {
               if (!moduleGroups[mk]) moduleGroups[mk] = [];
               moduleGroups[mk].push(fid);
             }
+            console.log('[badge-debug] Module groups:', JSON.stringify(
+              Object.fromEntries(Object.entries(moduleGroups).map(([k, v]) => [k, v.length + ' doc(s)']))
+            ));
 
             // Fetch all submissions for this user in this workspace (by driveFileId)
             const allDriveIds = Object.values(moduleGroups).flat();
@@ -433,21 +445,29 @@ export default async function handler(req, res) {
                   .filter((s) => s.exists && s.data().status === 'complete')
                   .map((s) => s.id.slice(claims.uid.length + 1))
               );
+              console.log('[badge-debug] Completed driveFileIds:', [...completedDriveIds]);
 
               // Determine which modules are fully completed
               const completedModules = new Set();
               for (const [mk, driveIds] of Object.entries(moduleGroups)) {
-                if (driveIds.length > 0 && driveIds.every((fid) => completedDriveIds.has(fid))) {
+                const total = driveIds.length;
+                const done = driveIds.filter((fid) => completedDriveIds.has(fid)).length;
+                console.log(`[badge-debug] Module "${mk}": ${done}/${total} complete`);
+                if (total > 0 && driveIds.every((fid) => completedDriveIds.has(fid))) {
                   completedModules.add(mk);
                 }
               }
+              console.log('[badge-debug] Fully completed modules:', [...completedModules]);
 
-              if (completedModules.size > 0) {
+              if (completedModules.size === 0) {
+                console.log('[badge-debug] SKIP: No modules are fully complete yet.');
+              } else {
                 // Find active badges whose requiredModules are all satisfied
                 const badgesSnap = await db.collection('badges')
                   .where('workspaceId', '==', workspaceId)
                   .where('active', '==', true)
                   .get();
+                console.log('[badge-debug] Active badges found:', badgesSnap.size);
 
                 const awardPromises = [];
                 for (const badgeDoc of badgesSnap.docs) {
@@ -455,6 +475,7 @@ export default async function handler(req, res) {
                   const qualifies = Array.isArray(badge.requiredModules) &&
                     badge.requiredModules.length > 0 &&
                     badge.requiredModules.every((m) => completedModules.has(m));
+                  console.log(`[badge-debug] Badge "${badge.name}" | requiredModules: ${JSON.stringify(badge.requiredModules)} | qualifies: ${qualifies}`);
                   if (!qualifies) continue;
 
                   const userBadgeId = `${claims.uid}_${badgeDoc.id}`;
@@ -462,24 +483,28 @@ export default async function handler(req, res) {
                   awardPromises.push(
                     userBadgeRef.get().then((snap) => {
                       if (!snap.exists) {
+                        console.log('[badge-debug] Awarding badge:', badge.name, '| userBadgeId:', userBadgeId);
                         return userBadgeRef.set({
                           userId: claims.uid,
                           badgeId: badgeDoc.id,
                           workspaceId,
                           awardedAt: FieldValue.serverTimestamp(),
                         });
+                      } else {
+                        console.log('[badge-debug] Badge already awarded:', badge.name);
                       }
                     })
                   );
                 }
                 await Promise.all(awardPromises);
+                console.log('[badge-debug] Badge award process complete.');
               }
             }
           }
         }
       } catch (badgeErr) {
         // Badge awarding is non-critical — log but don't fail the submission response
-        console.error('[api/submissions badge award]', badgeErr.message);
+        console.error('[badge-debug] ERROR in badge award logic:', badgeErr.stack ?? badgeErr.message);
       }
 
       return res.json({

@@ -8,6 +8,70 @@
 
 import { initializeApp, cert, getApps, getApp } from 'firebase-admin/app';
 import { getFirestore, FieldValue } from 'firebase-admin/firestore';
+import { google } from 'googleapis';
+
+// ── Google Drive client (service-account auth) ──────────────────────────────────
+const driveAuth = new google.auth.JWT({
+  email: process.env.GOOGLE_CLIENT_EMAIL,
+  key: process.env.GOOGLE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
+  scopes: ['https://www.googleapis.com/auth/drive.readonly'],
+});
+const drive = google.drive({ version: 'v3', auth: driveAuth });
+
+// ── Frontmatter helpers ─────────────────────────────────────────────────────
+
+/**
+ * Fetch a Drive file and return its frontmatter-derived badge fields.
+ * Returns { moduleKey, category } — both null/empty string on any failure.
+ */
+async function fetchFrontmatterFields(fileId) {
+  try {
+    const meta = await drive.files.get({ fileId, fields: 'mimeType', supportsAllDrives: true });
+    const mimeType = meta.data.mimeType;
+    let text;
+    if (mimeType === 'application/vnd.google-apps.document') {
+      const res = await drive.files.export({ fileId, mimeType: 'text/plain' }, { responseType: 'text' });
+      text = String(res.data);
+    } else {
+      const res = await drive.files.get(
+        { fileId, alt: 'media', supportsAllDrives: true },
+        { responseType: 'text' }
+      );
+      text = String(res.data);
+    }
+
+    const fmMatch = text.match(/^---\n([\s\S]*?)\n---/);
+    if (!fmMatch) return { moduleKey: null, category: '' };
+    const fm = fmMatch[1];
+
+    // Tags
+    const tags = [];
+    const tagsBlock = fm.match(/^tags:\n((?:[ \t]+-[ \t]+.+\n?)*)/m);
+    if (tagsBlock) {
+      for (const line of tagsBlock[1].split('\n')) {
+        const m = line.match(/^\s*-\s+(.+)$/);
+        if (m) tags.push(m[1].trim());
+      }
+    }
+    const moduleKey = tags.find((t) => t.startsWith('Module/')) ?? null;
+
+    // Category (list or scalar)
+    let category = '';
+    const catList = fm.match(/^category:\n((?:[ \t]+-[ \t]+.+\n?)*)/m);
+    if (catList) {
+      const first = catList[1].split('\n').find((l) => /^\s*-/.test(l));
+      if (first) { const m = first.match(/^\s*-\s+(.+)$/); if (m) category = m[1].trim(); }
+    } else {
+      const catInline = fm.match(/^category:\s+(.+)$/m);
+      if (catInline) category = catInline[1].trim();
+    }
+
+    return { moduleKey, category };
+  } catch {
+    // Drive unavailable or file unreadable — proceed without auto-detection
+    return { moduleKey: null, category: '' };
+  }
+}
 
 const serviceAccount = {
   type: process.env.GOOGLE_TYPE,
@@ -94,17 +158,22 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: 'workspaceId is required' });
     }
 
+    // Auto-populate moduleKey and category from Drive frontmatter when not supplied
+    const fm = await fetchFrontmatterFields(driveFileId);
+    const resolvedModuleKey = (typeof moduleKey === 'string' && moduleKey.trim()) ? moduleKey : fm.moduleKey;
+    const resolvedCategory  = (typeof category  === 'string' && category.trim())  ? category  : fm.category;
+
     const now = FieldValue.serverTimestamp();
     try {
       const ref = await db.collection('documents').add({
         driveFileId,
         title: title.trim(),
         description,
-        category,
+        category: resolvedCategory,
         version,
         workspaceId,
-        moduleKey: moduleKey ?? null,
-        status: 'early_access',
+        moduleKey: resolvedModuleKey,
+        status: 'published',
         createdAt: now,
         updatedAt: now,
       });
