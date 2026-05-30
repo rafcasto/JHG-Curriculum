@@ -169,7 +169,7 @@ export default function FilePage() {
   const { currentWorkspace } = useWorkspace();
   const workspaceId = currentWorkspace?.id ?? null;
   const { paidWorkspaces } = useUserProfile();
-  const { refreshDocuments, onReviewSubmissionUpdated, reviewDocs = [], reviewSubmissions = {} } = useOutletContext() ?? {};
+  const { refreshDocuments, onReviewSubmissionUpdated, reviewDocs = [], reviewLoading = false, reviewSubmissions = {} } = useOutletContext() ?? {};
 
   const [doc, setDoc] = useState(null);
   const [content, setContent] = useState('');
@@ -480,9 +480,12 @@ export default function FilePage() {
   const isLastDoc = currentDocIndex > -1 && currentDocIndex === orderedDocs.length - 1;
 
   const docGroup = useMemo(() => {
-    const p = doc?.path ?? '';
+    // doc.path is not returned by GET /api/file; use the Drive path from reviewDocs
+    // (AppLayout enriches reviewer/learner docs with drivePath from the file tree).
+    const reviewEntry = reviewDocs.find((d) => d.driveFileId === id);
+    const p = reviewEntry?.drivePath ?? doc?.path ?? '';
     return p.includes('/') ? p.split('/')[0] : '__root__';
-  }, [doc]);
+  }, [doc, reviewDocs, id]);
 
   function handlePrev() {
     if (prevDoc) navigate(`/file/${prevDoc.driveFileId}`);
@@ -576,7 +579,17 @@ export default function FilePage() {
     );
   }
 
-  if (role === 'learner' && doc && !canAccessGroup(docGroup, currentWorkspace?.paywallConfig ?? null, paidWorkspaces, workspaceId)) {
+  // For learners, block content until reviewDocs (which carry path/group info) are ready.
+  // This prevents briefly exposing content while the group membership is unknown.
+  if (role === 'learner' && reviewLoading) {
+    return (
+      <div className="file-loading">
+        <div className="spinner" />
+      </div>
+    );
+  }
+
+  if (role === 'learner' && (doc || !loading) && !canAccessGroup(docGroup, currentWorkspace?.paywallConfig ?? null, paidWorkspaces, workspaceId)) {
     const paywallConfig = currentWorkspace?.paywallConfig ?? null;
     const groupTier = getGroupAccess(docGroup, paywallConfig);
     const paymentUrl = paywallConfig?.paymentUrl ?? null;

@@ -86,7 +86,7 @@ export default function Navbar() {
             )}
           </div>
         ) : (
-          <button className="navbar-brand" onClick={() => navigate('/graph')}>
+          <button className="navbar-brand" onClick={() => navigate(role === 'reviewer' || role === 'learner' ? '/review' : '/graph')}>
             <span className="navbar-icon">⬡</span>
             {workspaceLabel}
           </button>

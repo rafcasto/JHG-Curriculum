@@ -46,7 +46,8 @@ export default function AppLayout() {
   const [reviewLoading, setReviewLoading] = useState(false);
 
   const loadReviewerData = useCallback(async (signal) => {
-    if (!isReviewer || !currentWorkspace?.id || !user) return;
+    if (!isReviewer) { setReviewLoading(false); return; }
+    if (!currentWorkspace?.id || !user) { setReviewLoading(true); return; }
     setReviewDocs([]);
     setReviewSubmissions({});
     setReviewLoading(true);

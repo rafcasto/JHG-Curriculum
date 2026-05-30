@@ -91,13 +91,15 @@ export default function ReviewerSidebar({ documents = [], submissions = {}, load
     <aside className="rsb-sidebar">
       <div className="rsb-header">
         <span className="rsb-title">Documents</span>
-        <input
-          className="rsb-search"
-          type="search"
-          placeholder="Search…"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-        />
+        {role !== 'learner' && (
+          <input
+            className="rsb-search"
+            type="search"
+            placeholder="Search…"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
+        )}
       </div>
 
       <nav className="rsb-nav">
