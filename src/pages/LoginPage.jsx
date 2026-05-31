@@ -73,6 +73,10 @@ export default function LoginPage() {
             {submitting ? 'Signing in…' : 'Sign In'}
           </button>
         </form>
+        <p className="login-help">
+          Didn&rsquo;t receive your welcome email?{' '}
+          <a href="mailto:rafael@talentdojo.pro">Contact us</a>
+        </p>
       </div>
     </div>
   );

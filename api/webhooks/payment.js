@@ -119,6 +119,66 @@ async function grantAccess(workspaceId, userId, email, displayName, accessLevel)
   await batch.commit();
 }
 
+/**
+ * Sends a welcome email to a newly created user with a Firebase password-set link.
+ * Uses Resend (https://resend.com). Requires RESEND_API_KEY and RESEND_FROM_EMAIL env vars.
+ * The email template (subject + HTML body) is loaded from wsData.paywallConfig.welcomeEmail,
+ * falling back to a sensible default. Both fields support {{name}} and {{link}} placeholders.
+ * The password-set link uses continueUrl (from config/app) as the Firebase action code redirect.
+ *
+ * NOTE: If you are on the Resend free plan without a verified domain, set RESEND_FROM_EMAIL to
+ *       onboarding@resend.dev until your sending domain is verified.
+ */
+async function sendWelcomeEmail(email, displayName, wsData) {
+  const apiKey = process.env.RESEND_API_KEY;
+  const fromEmail = process.env.RESEND_FROM_EMAIL;
+  if (!apiKey || !fromEmail) {
+    console.warn('[api/webhooks/payment] RESEND_API_KEY or RESEND_FROM_EMAIL not set — skipping welcome email');
+    return;
+  }
+
+  // Read global app config for the password-set redirect URL
+  const appConfigSnap = await db.collection('config').doc('app').get();
+  const continueUrl = appConfigSnap.data()?.continueUrl ?? null;
+
+  // Generate the Firebase password-set link (serves as "set password" for new passwordless accounts)
+  const actionCodeSettings = continueUrl ? { url: continueUrl, handleCodeInApp: false } : undefined;
+  const passwordSetUrl = await auth.generatePasswordResetLink(email, actionCodeSettings);
+
+  // Resolve template — fall back to built-in default if not configured on the workspace
+  const emailTemplate = wsData?.paywallConfig?.welcomeEmail ?? {};
+  const nameOrEmail = displayName ?? email;
+
+  const DEFAULT_SUBJECT = 'Welcome! Set your password to get started';
+  const DEFAULT_BODY = [
+    '<p>Hi {{name}},</p>',
+    '<p>Your account has been created. Click the link below to set your password and get started:</p>',
+    '<p><a href="{{link}}">Set your password</a></p>',
+    '<p>If you have any trouble accessing your account, contact us at ',
+    '<a href="mailto:rafael@talentdojo.pro">rafael@talentdojo.pro</a>.</p>',
+  ].join('\n');
+
+  const interpolate = (str) =>
+    str.replace(/\{\{name\}\}/g, nameOrEmail).replace(/\{\{link\}\}/g, passwordSetUrl);
+
+  const subject = interpolate(emailTemplate.subject?.trim() || DEFAULT_SUBJECT);
+  const html = interpolate(emailTemplate.body?.trim() || DEFAULT_BODY);
+
+  const sendRes = await fetch('https://api.resend.com/emails', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${apiKey}`,
+    },
+    body: JSON.stringify({ from: fromEmail, to: [email], subject, html }),
+  });
+
+  if (!sendRes.ok) {
+    const err = await sendRes.json().catch(() => ({}));
+    throw new Error(err.message ?? `Resend HTTP ${sendRes.status}`);
+  }
+}
+
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
@@ -190,6 +250,12 @@ export default async function handler(req, res) {
   try {
     await grantAccess(workspaceId, uid, email, displayName, accessLevel);
     console.log(`[api/webhooks/payment] Granted level ${accessLevel} (productId=${productId}): user=${uid} (${email}) workspace=${workspaceId} created=${created}`);
+
+    // Send welcome email with password-set link to newly created users (best-effort, non-blocking)
+    if (created) {
+      sendWelcomeEmail(email, displayName ?? null, wsData)
+        .catch((err) => console.error('[api/webhooks/payment] Welcome email failed:', err.message));
+    }
 
     // Fire outgoing Zapier webhook if configured (best-effort, non-blocking)
     const zapierWebhookUrl = wsData?.paywallConfig?.zapierWebhookUrl;

@@ -42,6 +42,15 @@ function WorkspacesSection({ users, getToken, refreshUsers }) {
       .catch(() => {});
   }, []);
 
+  useEffect(() => {
+    getToken()
+      .then((token) => fetch('/api/config', { headers: { Authorization: `Bearer ${token}` } }))
+      .then((r) => r.json())
+      .then((data) => setAppConfig({ continueUrl: data.continueUrl ?? '' }))
+      .catch(() => {});
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   async function saveGlobalCatalog() {
     setGcSaving(true);
     setGcError(null);
@@ -83,6 +92,26 @@ function WorkspacesSection({ users, getToken, refreshUsers }) {
     setGcDraft((d) => ({ ...d, assetTypes: d.assetTypes.filter((_, i) => i !== idx) }));
   }
 
+  async function saveAppConfig() {
+    setAppConfigSaving(true);
+    setAppConfigError(null);
+    try {
+      const token = await getToken();
+      const res = await fetch('/api/config', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ continueUrl: appConfig.continueUrl?.trim() || null }),
+      });
+      const body = await res.json();
+      if (!res.ok) throw new Error(body.error ?? 'Save failed');
+      setAppConfig({ continueUrl: body.continueUrl ?? '' });
+    } catch (e) {
+      setAppConfigError(e.message);
+    } finally {
+      setAppConfigSaving(false);
+    }
+  }
+
   // ── Per-Workspace Catalog ──────────────────────────────────────────────────
   const [catalogOpen, setCatalogOpen] = useState({}); // wsId -> boolean
   const [catalogDraft, setCatalogDraft] = useState({}); // wsId -> { inheritGlobalCatalog, tags, assetTypes }
@@ -104,6 +133,12 @@ function WorkspacesSection({ users, getToken, refreshUsers }) {
   const [paywallAvailGroups, setPaywallAvailGroups] = useState({}); // wsId -> string[]
   const [paywallGroupsLoading, setPaywallGroupsLoading] = useState({}); // wsId -> boolean
   const [regUrlCopied, setRegUrlCopied] = useState({}); // wsId -> boolean
+
+  // ── App Settings ────────────────────────────────────────────────────────────
+  const [appSettingsOpen, setAppSettingsOpen] = useState(false);
+  const [appConfig, setAppConfig] = useState({ continueUrl: '' });
+  const [appConfigSaving, setAppConfigSaving] = useState(false);
+  const [appConfigError, setAppConfigError] = useState(null);
 
   // ── Learner Access Level Promotion ─────────────────────────────────────────
   const [accessLevelSel, setAccessLevelSel] = useState({}); // `${wsId}:${uid}` -> 0|2|3
@@ -134,6 +169,8 @@ function WorkspacesSection({ users, getToken, refreshUsers }) {
             demoGroups: pc.demoGroups ?? [],
             level2Groups: pc.level2Groups ?? [],
             level3Groups: pc.level3Groups ?? [],
+            welcomeEmailSubject: pc.welcomeEmail?.subject ?? '',
+            welcomeEmailBody: pc.welcomeEmail?.body ?? '',
           },
         }));
       }
@@ -182,6 +219,10 @@ function WorkspacesSection({ users, getToken, refreshUsers }) {
             demoGroups: draft.demoGroups,
             level2Groups: draft.level2Groups,
             level3Groups: draft.level3Groups,
+            welcomeEmail: {
+              subject: draft.welcomeEmailSubject?.trim() || null,
+              body: draft.welcomeEmailBody?.trim() || null,
+            },
           },
         }),
       });
@@ -489,6 +530,46 @@ function WorkspacesSection({ users, getToken, refreshUsers }) {
   return (
     <section className="admin-section">
       <h2 className="admin-section-title">Workspaces</h2>
+
+      {/* ── App Settings card ── */}
+      <div className="catalog-card catalog-card--global">
+        <button
+          className="catalog-card-header"
+          onClick={() => setAppSettingsOpen((v) => !v)}
+        >
+          <span className="catalog-card-title">App Settings</span>
+          <span className="catalog-chevron">{appSettingsOpen ? '▲' : '▼'}</span>
+        </button>
+
+        {appSettingsOpen && (
+          <div className="catalog-panel">
+            <div style={{ maxWidth: '480px', marginBottom: '1rem' }}>
+              <p className="ws-settings-label" style={{ marginBottom: '0.375rem' }}>App login URL</p>
+              <input
+                className="admin-input"
+                type="url"
+                placeholder="https://your-app.com/login"
+                value={appConfig.continueUrl}
+                onChange={(e) => setAppConfig((c) => ({ ...c, continueUrl: e.target.value }))}
+              />
+              <p className="ws-settings-hint" style={{ marginTop: '0.375rem' }}>
+                Used as the redirect URL after a user sets their password via a welcome email.
+                Must be an <code>https://</code> URL.
+              </p>
+            </div>
+            {appConfigError && <p className="admin-form-error" style={{ marginBottom: '0.5rem' }}>{appConfigError}</p>}
+            <div className="catalog-save-row">
+              <button
+                className="admin-btn admin-btn--primary"
+                onClick={saveAppConfig}
+                disabled={appConfigSaving}
+              >
+                {appConfigSaving ? 'Saving…' : 'Save App Settings'}
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
 
       {/* ── Global Catalog card ── */}
       <div className="catalog-card catalog-card--global">
@@ -1124,6 +1205,42 @@ function WorkspacesSection({ users, getToken, refreshUsers }) {
                             <code> workspaceId</code>, <code>productId</code>, and <code>secret</code>.
                             The Zapier webhook URL above is called by this app after each successful purchase.
                           </p>
+
+                          {/* ── Welcome email template ── */}
+                          <p className="ws-settings-label" style={{ marginBottom: '0.375rem' }}>Welcome email subject</p>
+                          <div className="ws-settings-input-row" style={{ marginBottom: '0.75rem' }}>
+                            <input
+                              className="admin-input"
+                              type="text"
+                              placeholder="Welcome! Set your password to get started"
+                              value={paywallDraft[ws.id]?.welcomeEmailSubject ?? ''}
+                              onChange={(e) =>
+                                setPaywallDraft((prev) => ({
+                                  ...prev,
+                                  [ws.id]: { ...(prev[ws.id] ?? {}), welcomeEmailSubject: e.target.value },
+                                }))
+                              }
+                            />
+                          </div>
+                          <p className="ws-settings-label" style={{ marginBottom: '0.375rem' }}>Welcome email body (HTML)</p>
+                          <p className="ws-settings-hint" style={{ marginBottom: '0.375rem' }}>
+                            Available placeholders: <code>{'{{name}}'}</code> (learner name or email), <code>{'{{link}}'}</code> (password-set link).
+                          </p>
+                          <div className="ws-settings-input-row" style={{ marginBottom: '1rem' }}>
+                            <textarea
+                              className="admin-input"
+                              rows={6}
+                              placeholder={`<p>Hi {{name}},</p>\n<p>Click below to set your password:</p>\n<p><a href="{{link}}">Set your password</a></p>`}
+                              value={paywallDraft[ws.id]?.welcomeEmailBody ?? ''}
+                              style={{ resize: 'vertical', fontFamily: 'monospace', fontSize: '0.8125rem' }}
+                              onChange={(e) =>
+                                setPaywallDraft((prev) => ({
+                                  ...prev,
+                                  [ws.id]: { ...(prev[ws.id] ?? {}), welcomeEmailBody: e.target.value },
+                                }))
+                              }
+                            />
+                          </div>
 
                           {paywallGroupsLoading[ws.id] ? (
                             <p className="ws-settings-hint">Loading groups&hellip;</p>

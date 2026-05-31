@@ -112,3 +112,19 @@
   opacity: 0.6;
   cursor: not-allowed;
 }
+
+.login-help {
+  margin-top: 1.25rem;
+  text-align: center;
+  font-size: 0.8125rem;
+  color: var(--text-secondary);
+}
+
+.login-help a {
+  color: var(--accent);
+  text-decoration: none;
+}
+
+.login-help a:hover {
+  text-decoration: underline;
+}
