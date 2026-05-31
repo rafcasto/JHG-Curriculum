@@ -597,13 +597,13 @@ export default function FilePage() {
     const tierLabel = groupTier === 'level3' ? 'Cohort Program' : 'Self-Paced Program';
     const customDescription = paywallConfig?.paywallDescription ?? null;
     const ctaText = paywallConfig?.paywallCtaText ?? 'Get Access →';
+    const modalTitle = paywallConfig?.paywallTitle?.trim() || groupLabel;
     return (
       <div className="paywall-overlay">
         <div className="paywall-card">
-          <span className="paywall-icon" aria-hidden="true">🔒</span>
-          <h2 className="paywall-title">{groupLabel}</h2>
+          <h2 className="paywall-title">{modalTitle}</h2>
           {customDescription ? (
-            <p className="paywall-description">{customDescription}</p>
+            <div className="paywall-description"><ReactMarkdown remarkPlugins={[remarkGfm]}>{customDescription}</ReactMarkdown></div>
           ) : (
             <p className="paywall-description">
               This content is part of the <strong>{tierLabel}</strong> and requires a subscription to access.

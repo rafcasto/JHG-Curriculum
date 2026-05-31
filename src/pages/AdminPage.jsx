@@ -6,6 +6,7 @@ import QuestionManager from '../components/QuestionManager';
 import EarlyAccessManager from '../components/EarlyAccessManager';
 import FeedbackDashboard from '../components/FeedbackDashboard';
 import BadgeManager from '../components/BadgeManager';
+import RichTextEditor from '../components/RichTextEditor';
 import './AdminPage.css';
 
 const ROLES = ['admin', 'editor', 'viewer', 'reviewer', 'learner'];
@@ -97,7 +98,7 @@ function WorkspacesSection({ users, getToken, refreshUsers }) {
   const [linkedInError, setLinkedInError] = useState({}); // wsId -> string | null
 
   // ── Per-Workspace Paywall Config ───────────────────────────────────────────
-  const [paywallDraft, setPaywallDraft] = useState({}); // wsId -> { enabled, registrationEnabled, paymentUrl, selfPacedProductId, cohortProductId, webhookSecret, paywallDescription, paywallCtaText, demoGroups, level2Groups, level3Groups }
+  const [paywallDraft, setPaywallDraft] = useState({}); // wsId -> { enabled, registrationEnabled, paymentUrl, selfPacedProductId, cohortProductId, webhookSecret, paywallTitle, paywallDescription, paywallCtaText, demoGroups, level2Groups, level3Groups }
   const [paywallSaving, setPaywallSaving] = useState({}); // wsId -> boolean
   const [paywallError, setPaywallError] = useState({}); // wsId -> string | null
   const [paywallAvailGroups, setPaywallAvailGroups] = useState({}); // wsId -> string[]
@@ -128,6 +129,7 @@ function WorkspacesSection({ users, getToken, refreshUsers }) {
             webhookSecret: '', // never pre-filled (write-only from the client)
             zapierWebhookUrl: pc.zapierWebhookUrl ?? `${window.location.origin}/api/webhooks/payment`,
             paywallDescription: pc.paywallDescription ?? '',
+            paywallTitle: pc.paywallTitle ?? '',
             paywallCtaText: pc.paywallCtaText ?? '',
             demoGroups: pc.demoGroups ?? [],
             level2Groups: pc.level2Groups ?? [],
@@ -174,6 +176,7 @@ function WorkspacesSection({ users, getToken, refreshUsers }) {
             cohortProductId: draft.cohortProductId?.trim() || null,
             ...(draft.webhookSecret.trim() ? { webhookSecret: draft.webhookSecret.trim() } : {}),
             zapierWebhookUrl: draft.zapierWebhookUrl?.trim() || null,
+            paywallTitle: draft.paywallTitle?.trim() || null,
             paywallDescription: draft.paywallDescription?.trim() || null,
             paywallCtaText: draft.paywallCtaText?.trim() || null,
             demoGroups: draft.demoGroups,
@@ -1016,15 +1019,27 @@ function WorkspacesSection({ users, getToken, refreshUsers }) {
                             />
                           </div>
                           <div className="ws-settings-input-row" style={{ marginBottom: '0.5rem' }}>
-                            <textarea
+                            <input
                               className="admin-input"
-                              rows={3}
-                              placeholder='Paywall description (default: "This content is part of the [Program] and requires a subscription to access.")'
-                              value={paywallDraft[ws.id]?.paywallDescription ?? ''}
+                              type="text"
+                              placeholder="Modal title (default: folder name)"
+                              value={paywallDraft[ws.id]?.paywallTitle ?? ''}
                               onChange={(e) =>
                                 setPaywallDraft((prev) => ({
                                   ...prev,
-                                  [ws.id]: { ...(prev[ws.id] ?? {}), paywallDescription: e.target.value },
+                                  [ws.id]: { ...(prev[ws.id] ?? {}), paywallTitle: e.target.value },
+                                }))
+                              }
+                            />
+                          </div>
+                          <div className="ws-settings-input-row" style={{ marginBottom: '0.5rem' }}>
+                            <RichTextEditor
+                              key={ws.id}
+                              initialContent={paywallDraft[ws.id]?.paywallDescription ?? ''}
+                              onChange={(md) =>
+                                setPaywallDraft((prev) => ({
+                                  ...prev,
+                                  [ws.id]: { ...(prev[ws.id] ?? {}), paywallDescription: md },
                                 }))
                               }
                             />

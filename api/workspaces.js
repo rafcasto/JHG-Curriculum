@@ -207,7 +207,7 @@ export default async function handler(req, res) {
         if (pc === null) {
           updates.paywallConfig = null;
         } else if (typeof pc === 'object' && !Array.isArray(pc)) {
-          const { enabled, registrationEnabled, paymentUrl, selfPacedProductId, cohortProductId, webhookSecret, zapierWebhookUrl, level2Groups, level3Groups, demoGroups, paywallDescription, paywallCtaText } = pc;
+          const { enabled, registrationEnabled, paymentUrl, selfPacedProductId, cohortProductId, webhookSecret, zapierWebhookUrl, level2Groups, level3Groups, demoGroups, paywallTitle, paywallDescription, paywallCtaText } = pc;
           if (typeof enabled !== 'boolean') {
             return res.status(400).json({ error: 'paywallConfig.enabled must be a boolean' });
           }
@@ -222,6 +222,9 @@ export default async function handler(req, res) {
           }
           if (zapierWebhookUrl != null && typeof zapierWebhookUrl !== 'string') {
             return res.status(400).json({ error: 'paywallConfig.zapierWebhookUrl must be a string or null' });
+          }
+          if (paywallTitle != null && typeof paywallTitle !== 'string') {
+            return res.status(400).json({ error: 'paywallConfig.paywallTitle must be a string or null' });
           }
           if (paywallDescription != null && typeof paywallDescription !== 'string') {
             return res.status(400).json({ error: 'paywallConfig.paywallDescription must be a string or null' });
@@ -243,6 +246,7 @@ export default async function handler(req, res) {
             paymentUrl: paymentUrl ?? null,
             selfPacedProductId: selfPacedProductId ?? null,
             cohortProductId: cohortProductId ?? null,
+            paywallTitle: (typeof paywallTitle === 'string' && paywallTitle.trim()) ? paywallTitle.trim() : null,
             paywallDescription: (typeof paywallDescription === 'string' && paywallDescription.trim()) ? paywallDescription.trim() : null,
             paywallCtaText: (typeof paywallCtaText === 'string' && paywallCtaText.trim()) ? paywallCtaText.trim() : null,
             webhookSecret: resolvedWebhookSecret,
