@@ -207,7 +207,7 @@ export default async function handler(req, res) {
         if (pc === null) {
           updates.paywallConfig = null;
         } else if (typeof pc === 'object' && !Array.isArray(pc)) {
-          const { enabled, registrationEnabled, paymentUrl, selfPacedProductId, cohortProductId, webhookSecret, zapierWebhookUrl, level2Groups, level3Groups, demoGroups } = pc;
+          const { enabled, registrationEnabled, paymentUrl, selfPacedProductId, cohortProductId, webhookSecret, zapierWebhookUrl, level2Groups, level3Groups, demoGroups, paywallDescription, paywallCtaText } = pc;
           if (typeof enabled !== 'boolean') {
             return res.status(400).json({ error: 'paywallConfig.enabled must be a boolean' });
           }
@@ -223,6 +223,12 @@ export default async function handler(req, res) {
           if (zapierWebhookUrl != null && typeof zapierWebhookUrl !== 'string') {
             return res.status(400).json({ error: 'paywallConfig.zapierWebhookUrl must be a string or null' });
           }
+          if (paywallDescription != null && typeof paywallDescription !== 'string') {
+            return res.status(400).json({ error: 'paywallConfig.paywallDescription must be a string or null' });
+          }
+          if (paywallCtaText != null && typeof paywallCtaText !== 'string') {
+            return res.status(400).json({ error: 'paywallConfig.paywallCtaText must be a string or null' });
+          }
           if (!Array.isArray(level2Groups) || !Array.isArray(level3Groups) || !Array.isArray(demoGroups)) {
             return res.status(400).json({ error: 'paywallConfig.level2Groups, level3Groups, and demoGroups must be arrays' });
           }
@@ -237,6 +243,8 @@ export default async function handler(req, res) {
             paymentUrl: paymentUrl ?? null,
             selfPacedProductId: selfPacedProductId ?? null,
             cohortProductId: cohortProductId ?? null,
+            paywallDescription: (typeof paywallDescription === 'string' && paywallDescription.trim()) ? paywallDescription.trim() : null,
+            paywallCtaText: (typeof paywallCtaText === 'string' && paywallCtaText.trim()) ? paywallCtaText.trim() : null,
             webhookSecret: resolvedWebhookSecret,
             zapierWebhookUrl: (typeof zapierWebhookUrl === 'string' && zapierWebhookUrl.trim())
               ? zapierWebhookUrl.trim()

@@ -595,14 +595,20 @@ export default function FilePage() {
     const paymentUrl = paywallConfig?.paymentUrl ?? null;
     const groupLabel = docGroup === '__root__' ? 'This content' : docGroup;
     const tierLabel = groupTier === 'level3' ? 'Cohort Program' : 'Self-Paced Program';
+    const customDescription = paywallConfig?.paywallDescription ?? null;
+    const ctaText = paywallConfig?.paywallCtaText ?? 'Get Access →';
     return (
       <div className="paywall-overlay">
         <div className="paywall-card">
           <span className="paywall-icon" aria-hidden="true">🔒</span>
           <h2 className="paywall-title">{groupLabel}</h2>
-          <p className="paywall-description">
-            This content is part of the <strong>{tierLabel}</strong> and requires a subscription to access.
-          </p>
+          {customDescription ? (
+            <p className="paywall-description">{customDescription}</p>
+          ) : (
+            <p className="paywall-description">
+              This content is part of the <strong>{tierLabel}</strong> and requires a subscription to access.
+            </p>
+          )}
           {paymentUrl ? (
             <a
               className="paywall-cta"
@@ -610,7 +616,7 @@ export default function FilePage() {
               target="_blank"
               rel="noreferrer"
             >
-              Get Access →
+              {ctaText}
             </a>
           ) : (
             <p className="paywall-no-url">Payment information coming soon.</p>

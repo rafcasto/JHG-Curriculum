@@ -97,7 +97,7 @@ function WorkspacesSection({ users, getToken, refreshUsers }) {
   const [linkedInError, setLinkedInError] = useState({}); // wsId -> string | null
 
   // ── Per-Workspace Paywall Config ───────────────────────────────────────────
-  const [paywallDraft, setPaywallDraft] = useState({}); // wsId -> { enabled, registrationEnabled, paymentUrl, selfPacedProductId, cohortProductId, webhookSecret, demoGroups, level2Groups, level3Groups }
+  const [paywallDraft, setPaywallDraft] = useState({}); // wsId -> { enabled, registrationEnabled, paymentUrl, selfPacedProductId, cohortProductId, webhookSecret, paywallDescription, paywallCtaText, demoGroups, level2Groups, level3Groups }
   const [paywallSaving, setPaywallSaving] = useState({}); // wsId -> boolean
   const [paywallError, setPaywallError] = useState({}); // wsId -> string | null
   const [paywallAvailGroups, setPaywallAvailGroups] = useState({}); // wsId -> string[]
@@ -127,6 +127,8 @@ function WorkspacesSection({ users, getToken, refreshUsers }) {
             cohortProductId: pc.cohortProductId ?? '',
             webhookSecret: '', // never pre-filled (write-only from the client)
             zapierWebhookUrl: pc.zapierWebhookUrl ?? `${window.location.origin}/api/webhooks/payment`,
+            paywallDescription: pc.paywallDescription ?? '',
+            paywallCtaText: pc.paywallCtaText ?? '',
             demoGroups: pc.demoGroups ?? [],
             level2Groups: pc.level2Groups ?? [],
             level3Groups: pc.level3Groups ?? [],
@@ -172,6 +174,8 @@ function WorkspacesSection({ users, getToken, refreshUsers }) {
             cohortProductId: draft.cohortProductId?.trim() || null,
             ...(draft.webhookSecret.trim() ? { webhookSecret: draft.webhookSecret.trim() } : {}),
             zapierWebhookUrl: draft.zapierWebhookUrl?.trim() || null,
+            paywallDescription: draft.paywallDescription?.trim() || null,
+            paywallCtaText: draft.paywallCtaText?.trim() || null,
             demoGroups: draft.demoGroups,
             level2Groups: draft.level2Groups,
             level3Groups: draft.level3Groups,
@@ -1007,6 +1011,34 @@ function WorkspacesSection({ users, getToken, refreshUsers }) {
                                 setPaywallDraft((prev) => ({
                                   ...prev,
                                   [ws.id]: { ...(prev[ws.id] ?? {}), paymentUrl: e.target.value },
+                                }))
+                              }
+                            />
+                          </div>
+                          <div className="ws-settings-input-row" style={{ marginBottom: '0.5rem' }}>
+                            <textarea
+                              className="admin-input"
+                              rows={3}
+                              placeholder='Paywall description (default: "This content is part of the [Program] and requires a subscription to access.")'
+                              value={paywallDraft[ws.id]?.paywallDescription ?? ''}
+                              onChange={(e) =>
+                                setPaywallDraft((prev) => ({
+                                  ...prev,
+                                  [ws.id]: { ...(prev[ws.id] ?? {}), paywallDescription: e.target.value },
+                                }))
+                              }
+                            />
+                          </div>
+                          <div className="ws-settings-input-row" style={{ marginBottom: '0.5rem' }}>
+                            <input
+                              className="admin-input"
+                              type="text"
+                              placeholder='CTA button text (default: "Get Access →")'
+                              value={paywallDraft[ws.id]?.paywallCtaText ?? ''}
+                              onChange={(e) =>
+                                setPaywallDraft((prev) => ({
+                                  ...prev,
+                                  [ws.id]: { ...(prev[ws.id] ?? {}), paywallCtaText: e.target.value },
                                 }))
                               }
                             />
