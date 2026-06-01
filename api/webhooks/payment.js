@@ -174,8 +174,8 @@ async function sendWelcomeEmail(email, displayName, wsData) {
   });
 
   if (!sendRes.ok) {
-    const err = await sendRes.json().catch(() => ({}));
-    throw new Error(err.message ?? `Resend HTTP ${sendRes.status}`);
+    const errBody = await sendRes.json().catch(() => ({}));
+    throw new Error(`Resend HTTP ${sendRes.status}: ${errBody.message ?? JSON.stringify(errBody)}`);
   }
 }
 
@@ -184,19 +184,38 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const { email, name, workspaceId, productId, secret } = req.body ?? {};
+  // Guard against unparsed body (e.g. Zapier sending wrong Content-Type)
+  let body = req.body;
+  if (typeof body === 'string') {
+    try {
+      body = JSON.parse(body);
+    } catch {
+      console.error('[api/webhooks/payment] Failed to parse request body as JSON:', body.slice(0, 200));
+      return res.status(400).json({ error: 'Request body must be valid JSON' });
+    }
+  }
+  body = body ?? {};
+
+  // Log incoming request (mask secret for security)
+  console.log('[api/webhooks/payment] Incoming payload:', JSON.stringify({ ...body, secret: body.secret ? '***' : undefined }));
+
+  const { email, name, workspaceId, productId, secret } = body;
 
   // Validate required fields
   if (!email || typeof email !== 'string' || !email.includes('@')) {
+    console.error('[api/webhooks/payment] Validation failed: email is missing or invalid —', JSON.stringify(email));
     return res.status(400).json({ error: 'email is required and must be a valid address' });
   }
   if (!workspaceId || typeof workspaceId !== 'string') {
+    console.error('[api/webhooks/payment] Validation failed: workspaceId is missing —', JSON.stringify(workspaceId));
     return res.status(400).json({ error: 'workspaceId is required' });
   }
   if (!productId || typeof productId !== 'string') {
+    console.error('[api/webhooks/payment] Validation failed: productId is missing —', JSON.stringify(productId));
     return res.status(400).json({ error: 'productId is required' });
   }
   if (!secret || typeof secret !== 'string') {
+    console.error('[api/webhooks/payment] Validation failed: secret is missing');
     return res.status(400).json({ error: 'secret is required' });
   }
 
@@ -232,6 +251,7 @@ export default async function handler(req, res) {
   } else if (productId === cohortProductId) {
     accessLevel = 3;
   } else {
+    console.error(`[api/webhooks/payment] productId mismatch — received: '${productId}', configured selfPacedProductId: '${selfPacedProductId}', cohortProductId: '${cohortProductId}'`);
     return res.status(400).json({ error: `productId '${productId}' is not configured for this workspace` });
   }
 
