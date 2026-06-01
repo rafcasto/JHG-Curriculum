@@ -143,7 +143,19 @@ async function sendWelcomeEmail(email, displayName, wsData) {
 
   // Generate the Firebase password-set link (serves as "set password" for new passwordless accounts)
   const actionCodeSettings = continueUrl ? { url: continueUrl, handleCodeInApp: false } : undefined;
-  const passwordSetUrl = await auth.generatePasswordResetLink(email, actionCodeSettings);
+  const rawPasswordSetUrl = await auth.generatePasswordResetLink(email, actionCodeSettings);
+
+  // Rewrite the Firebase-hosted action URL to our branded /auth/action page.
+  // Firebase generates: https://[project].firebaseapp.com/__/auth/action?mode=...&oobCode=...
+  // Replacing the base makes the link open our custom handler — oobCodes are project-scoped
+  // and work identically with Firebase SDK calls (confirmPasswordReset) regardless of delivery URL.
+  const appUrl = process.env.APP_URL ?? continueUrl ?? '';
+  const passwordSetUrl = appUrl
+    ? rawPasswordSetUrl.replace(
+        /^https:\/\/[^/]+\/__\/auth\/action/,
+        `${appUrl.replace(/\/$/, '')}/auth/action`
+      )
+    : rawPasswordSetUrl;
 
   // Resolve template — fall back to built-in default if not configured on the workspace
   const emailTemplate = wsData?.paywallConfig?.welcomeEmail ?? {};

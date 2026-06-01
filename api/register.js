@@ -139,11 +139,77 @@ export default async function handler(req, res) {
       await batch.commit();
     } catch (e) {
       console.error('[api/register POST] Firestore batch:', e.message);
-      // Auth user already created — return success so client can send verification email
+      // Auth user already created — continue to send verification email
+    }
+
+    // Send branded email verification via Resend
+    try {
+      await sendVerificationEmail(normalizedEmail, displayName, wsSnap.data());
+    } catch (e) {
+      console.error('[api/register POST] sendVerificationEmail:', e.message);
+      // Non-fatal — user can still log in and request a new verification from the app
     }
 
     return res.status(201).json({ success: true });
   }
 
   return res.status(405).json({ error: 'Method not allowed' });
+}
+
+/**
+ * Generates a Firebase email-verification link and sends it via Resend.
+ * Uses the workspace's paywallConfig.verificationEmail template (subject + HTML body),
+ * falling back to a built-in default. Supports {{name}} and {{link}} placeholders.
+ */
+async function sendVerificationEmail(email, displayName, wsData) {
+  const apiKey = process.env.RESEND_API_KEY;
+  const fromEmail = process.env.RESEND_FROM_EMAIL;
+  if (!apiKey || !fromEmail) {
+    console.warn('[api/register] RESEND_API_KEY or RESEND_FROM_EMAIL not set — skipping verification email');
+    return;
+  }
+
+  const appUrl = process.env.APP_URL ?? 'https://jhg-academy.vercel.app';
+  const rawVerificationLink = await adminAuth.generateEmailVerificationLink(email, {
+    url: `${appUrl.replace(/\/$/, '')}/login?verified=true`,
+    handleCodeInApp: false,
+  });
+
+  // Rewrite the Firebase-hosted action URL to our branded /auth/action page.
+  // oobCodes work identically with applyActionCode() regardless of delivery URL.
+  const verificationLink = rawVerificationLink.replace(
+    /^https:\/\/[^/]+\/__\/auth\/action/,
+    `${appUrl.replace(/\/$/, '')}/auth/action`
+  );
+
+  const emailTemplate = wsData?.paywallConfig?.verificationEmail ?? {};
+  const nameOrEmail = displayName ?? email;
+
+  const DEFAULT_SUBJECT = 'Verify your email to get started';
+  const DEFAULT_BODY = [
+    '<p>Hi {{name}},</p>',
+    '<p>Thanks for registering. Click the link below to verify your email address and access your account:</p>',
+    '<p><a href="{{link}}">Verify my email</a></p>',
+    '<p>If you did not create this account, you can safely ignore this email.</p>',
+  ].join('\n');
+
+  const interpolate = (str) =>
+    str.replace(/\{\{name\}\}/g, nameOrEmail).replace(/\{\{link\}\}/g, verificationLink);
+
+  const subject = interpolate(emailTemplate.subject?.trim() || DEFAULT_SUBJECT);
+  const html = interpolate(emailTemplate.body?.trim() || DEFAULT_BODY);
+
+  const sendRes = await fetch('https://api.resend.com/emails', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${apiKey}`,
+    },
+    body: JSON.stringify({ from: fromEmail, to: [email], subject, html }),
+  });
+
+  if (!sendRes.ok) {
+    const errBody = await sendRes.json().catch(() => ({}));
+    throw new Error(`Resend HTTP ${sendRes.status}: ${errBody.message ?? JSON.stringify(errBody)}`);
+  }
 }

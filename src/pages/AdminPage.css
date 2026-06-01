@@ -678,6 +678,46 @@
   cursor: pointer;
 }
 
+/* ── Email Template Accordion Tabs ─────────────────────────────────────── */
+.email-tab-section {
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  margin-bottom: 0.5rem;
+  overflow: hidden;
+}
+
+.email-tab-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  background: var(--bg-tertiary);
+  border: none;
+  padding: 0.625rem 0.875rem;
+  cursor: pointer;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  text-align: left;
+  transition: background 0.15s;
+}
+
+.email-tab-header:hover {
+  background: color-mix(in srgb, var(--bg-tertiary) 80%, var(--accent) 20%);
+}
+
+.email-tab-chevron {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  flex-shrink: 0;
+}
+
+.email-tab-body {
+  padding: 0.875rem;
+  background: var(--bg-secondary);
+  border-top: 1px solid var(--border-color);
+}
+
 @media (max-width: 720px) {
   .paywall-groups-grid {
     grid-template-columns: 1fr;

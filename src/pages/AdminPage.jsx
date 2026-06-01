@@ -127,12 +127,16 @@ function WorkspacesSection({ users, getToken, refreshUsers }) {
   const [linkedInError, setLinkedInError] = useState({}); // wsId -> string | null
 
   // ── Per-Workspace Paywall Config ───────────────────────────────────────────
-  const [paywallDraft, setPaywallDraft] = useState({}); // wsId -> { enabled, registrationEnabled, paymentUrl, selfPacedProductId, cohortProductId, webhookSecret, paywallTitle, paywallDescription, paywallCtaText, demoGroups, level2Groups, level3Groups }
+  const [paywallDraft, setPaywallDraft] = useState({}); // wsId -> config draft
   const [paywallSaving, setPaywallSaving] = useState({}); // wsId -> boolean
   const [paywallError, setPaywallError] = useState({}); // wsId -> string | null
   const [paywallAvailGroups, setPaywallAvailGroups] = useState({}); // wsId -> string[]
   const [paywallGroupsLoading, setPaywallGroupsLoading] = useState({}); // wsId -> boolean
   const [regUrlCopied, setRegUrlCopied] = useState({}); // wsId -> boolean
+  // ── Per-Workspace Email Template Accordion Tabs ────────────────────────────
+  const [paywallCopyOpen, setPaywallCopyOpen] = useState({}); // wsId -> boolean
+  const [pwdEmailOpen, setPwdEmailOpen] = useState({}); // wsId -> boolean
+  const [verifyEmailOpen, setVerifyEmailOpen] = useState({}); // wsId -> boolean
 
   // ── App Settings ────────────────────────────────────────────────────────────
   const [appSettingsOpen, setAppSettingsOpen] = useState(false);
@@ -171,6 +175,8 @@ function WorkspacesSection({ users, getToken, refreshUsers }) {
             level3Groups: pc.level3Groups ?? [],
             welcomeEmailSubject: pc.welcomeEmail?.subject ?? '',
             welcomeEmailBody: pc.welcomeEmail?.body ?? '',
+            verificationEmailSubject: pc.verificationEmail?.subject ?? '',
+            verificationEmailBody: pc.verificationEmail?.body ?? '',
           },
         }));
       }
@@ -222,6 +228,10 @@ function WorkspacesSection({ users, getToken, refreshUsers }) {
             welcomeEmail: {
               subject: draft.welcomeEmailSubject?.trim() || null,
               body: draft.welcomeEmailBody?.trim() || null,
+            },
+            verificationEmail: {
+              subject: draft.verificationEmailSubject?.trim() || null,
+              body: draft.verificationEmailBody?.trim() || null,
             },
           },
         }),
@@ -1085,60 +1095,7 @@ function WorkspacesSection({ users, getToken, refreshUsers }) {
 
                       {paywallDraft[ws.id]?.enabled && (
                         <>
-                          <div className="ws-settings-input-row" style={{ marginBottom: '0.5rem' }}>
-                            <input
-                              className="admin-input"
-                              type="url"
-                              placeholder="Payment URL"
-                              value={paywallDraft[ws.id]?.paymentUrl ?? ''}
-                              onChange={(e) =>
-                                setPaywallDraft((prev) => ({
-                                  ...prev,
-                                  [ws.id]: { ...(prev[ws.id] ?? {}), paymentUrl: e.target.value },
-                                }))
-                              }
-                            />
-                          </div>
-                          <div className="ws-settings-input-row" style={{ marginBottom: '0.5rem' }}>
-                            <input
-                              className="admin-input"
-                              type="text"
-                              placeholder="Modal title (default: folder name)"
-                              value={paywallDraft[ws.id]?.paywallTitle ?? ''}
-                              onChange={(e) =>
-                                setPaywallDraft((prev) => ({
-                                  ...prev,
-                                  [ws.id]: { ...(prev[ws.id] ?? {}), paywallTitle: e.target.value },
-                                }))
-                              }
-                            />
-                          </div>
-                          <div className="ws-settings-input-row" style={{ marginBottom: '0.5rem' }}>
-                            <RichTextEditor
-                              key={ws.id}
-                              initialContent={paywallDraft[ws.id]?.paywallDescription ?? ''}
-                              onChange={(md) =>
-                                setPaywallDraft((prev) => ({
-                                  ...prev,
-                                  [ws.id]: { ...(prev[ws.id] ?? {}), paywallDescription: md },
-                                }))
-                              }
-                            />
-                          </div>
-                          <div className="ws-settings-input-row" style={{ marginBottom: '0.5rem' }}>
-                            <input
-                              className="admin-input"
-                              type="text"
-                              placeholder='CTA button text (default: "Get Access →")'
-                              value={paywallDraft[ws.id]?.paywallCtaText ?? ''}
-                              onChange={(e) =>
-                                setPaywallDraft((prev) => ({
-                                  ...prev,
-                                  [ws.id]: { ...(prev[ws.id] ?? {}), paywallCtaText: e.target.value },
-                                }))
-                              }
-                            />
-                          </div>
+                          {/* ── Payment integration fields ── */}
                           <div className="ws-settings-input-row" style={{ marginBottom: '0.5rem' }}>
                             <input
                               className="admin-input"
@@ -1186,7 +1143,7 @@ function WorkspacesSection({ users, getToken, refreshUsers }) {
                               }
                             />
                           </div>
-                          <div className="ws-settings-input-row" style={{ marginBottom: '1rem' }}>
+                          <div className="ws-settings-input-row" style={{ marginBottom: '0.75rem' }}>
                             <input
                               className="admin-input"
                               type="url"
@@ -1200,46 +1157,183 @@ function WorkspacesSection({ users, getToken, refreshUsers }) {
                               }
                             />
                           </div>
-                          <p className="ws-settings-hint" style={{ marginBottom: '0.75rem' }}>
+                          <p className="ws-settings-hint" style={{ marginBottom: '1rem' }}>
                             Payment events should POST to <code>/api/webhooks/payment</code> with
                             <code> workspaceId</code>, <code>productId</code>, and <code>secret</code>.
                             The Zapier webhook URL above is called by this app after each successful purchase.
                           </p>
 
-                          {/* ── Welcome email template ── */}
-                          <p className="ws-settings-label" style={{ marginBottom: '0.375rem' }}>Welcome email subject</p>
-                          <div className="ws-settings-input-row" style={{ marginBottom: '0.75rem' }}>
-                            <input
-                              className="admin-input"
-                              type="text"
-                              placeholder="Welcome! Set your password to get started"
-                              value={paywallDraft[ws.id]?.welcomeEmailSubject ?? ''}
-                              onChange={(e) =>
-                                setPaywallDraft((prev) => ({
-                                  ...prev,
-                                  [ws.id]: { ...(prev[ws.id] ?? {}), welcomeEmailSubject: e.target.value },
-                                }))
-                              }
-                            />
+                          {/* ── Paywall Copy accordion ── */}
+                          <div className="email-tab-section">
+                            <button
+                              type="button"
+                              className="email-tab-header"
+                              onClick={() => setPaywallCopyOpen((prev) => ({ ...prev, [ws.id]: !prev[ws.id] }))}
+                            >
+                              <span>Paywall Copy</span>
+                              <span className="email-tab-chevron">{paywallCopyOpen[ws.id] ? '▲' : '▼'}</span>
+                            </button>
+                            {paywallCopyOpen[ws.id] && (
+                              <div className="email-tab-body">
+                                <p className="ws-settings-hint" style={{ marginBottom: '0.75rem' }}>
+                                  Text shown on the paywall modal when a learner hits a locked lesson group.
+                                </p>
+                                <div className="ws-settings-input-row" style={{ marginBottom: '0.5rem' }}>
+                                  <input
+                                    className="admin-input"
+                                    type="url"
+                                    placeholder="Payment URL"
+                                    value={paywallDraft[ws.id]?.paymentUrl ?? ''}
+                                    onChange={(e) =>
+                                      setPaywallDraft((prev) => ({
+                                        ...prev,
+                                        [ws.id]: { ...(prev[ws.id] ?? {}), paymentUrl: e.target.value },
+                                      }))
+                                    }
+                                  />
+                                </div>
+                                <div className="ws-settings-input-row" style={{ marginBottom: '0.5rem' }}>
+                                  <input
+                                    className="admin-input"
+                                    type="text"
+                                    placeholder="Modal title (default: folder name)"
+                                    value={paywallDraft[ws.id]?.paywallTitle ?? ''}
+                                    onChange={(e) =>
+                                      setPaywallDraft((prev) => ({
+                                        ...prev,
+                                        [ws.id]: { ...(prev[ws.id] ?? {}), paywallTitle: e.target.value },
+                                      }))
+                                    }
+                                  />
+                                </div>
+                                <div className="ws-settings-input-row" style={{ marginBottom: '0.5rem' }}>
+                                  <RichTextEditor
+                                    key={`${ws.id}-desc`}
+                                    initialContent={paywallDraft[ws.id]?.paywallDescription ?? ''}
+                                    onChange={(md) =>
+                                      setPaywallDraft((prev) => ({
+                                        ...prev,
+                                        [ws.id]: { ...(prev[ws.id] ?? {}), paywallDescription: md },
+                                      }))
+                                    }
+                                  />
+                                </div>
+                                <div className="ws-settings-input-row">
+                                  <input
+                                    className="admin-input"
+                                    type="text"
+                                    placeholder='CTA button text (default: "Get Access →")'
+                                    value={paywallDraft[ws.id]?.paywallCtaText ?? ''}
+                                    onChange={(e) =>
+                                      setPaywallDraft((prev) => ({
+                                        ...prev,
+                                        [ws.id]: { ...(prev[ws.id] ?? {}), paywallCtaText: e.target.value },
+                                      }))
+                                    }
+                                  />
+                                </div>
+                              </div>
+                            )}
                           </div>
-                          <p className="ws-settings-label" style={{ marginBottom: '0.375rem' }}>Welcome email body (HTML)</p>
-                          <p className="ws-settings-hint" style={{ marginBottom: '0.375rem' }}>
-                            Available placeholders: <code>{'{{name}}'}</code> (learner name or email), <code>{'{{link}}'}</code> (password-set link).
-                          </p>
-                          <div className="ws-settings-input-row" style={{ marginBottom: '1rem' }}>
-                            <textarea
-                              className="admin-input"
-                              rows={6}
-                              placeholder={`<p>Hi {{name}},</p>\n<p>Click below to set your password:</p>\n<p><a href="{{link}}">Set your password</a></p>`}
-                              value={paywallDraft[ws.id]?.welcomeEmailBody ?? ''}
-                              style={{ resize: 'vertical', fontFamily: 'monospace', fontSize: '0.8125rem' }}
-                              onChange={(e) =>
-                                setPaywallDraft((prev) => ({
-                                  ...prev,
-                                  [ws.id]: { ...(prev[ws.id] ?? {}), welcomeEmailBody: e.target.value },
-                                }))
-                              }
-                            />
+
+                          {/* ── Password Set Email accordion ── */}
+                          <div className="email-tab-section">
+                            <button
+                              type="button"
+                              className="email-tab-header"
+                              onClick={() => setPwdEmailOpen((prev) => ({ ...prev, [ws.id]: !prev[ws.id] }))}
+                            >
+                              <span>Password Set Email</span>
+                              <span className="email-tab-chevron">{pwdEmailOpen[ws.id] ? '▲' : '▼'}</span>
+                            </button>
+                            {pwdEmailOpen[ws.id] && (
+                              <div className="email-tab-body">
+                                <p className="ws-settings-hint" style={{ marginBottom: '0.75rem' }}>
+                                  Sent to new paid learners after a successful payment. Use <code>{'{{name}}'}</code> and <code>{'{{link}}'}</code> (password-set link).
+                                </p>
+                                <p className="ws-settings-label" style={{ marginBottom: '0.375rem' }}>Subject</p>
+                                <div className="ws-settings-input-row" style={{ marginBottom: '0.75rem' }}>
+                                  <input
+                                    className="admin-input"
+                                    type="text"
+                                    placeholder="Welcome! Set your password to get started"
+                                    value={paywallDraft[ws.id]?.welcomeEmailSubject ?? ''}
+                                    onChange={(e) =>
+                                      setPaywallDraft((prev) => ({
+                                        ...prev,
+                                        [ws.id]: { ...(prev[ws.id] ?? {}), welcomeEmailSubject: e.target.value },
+                                      }))
+                                    }
+                                  />
+                                </div>
+                                <p className="ws-settings-label" style={{ marginBottom: '0.375rem' }}>Body (HTML)</p>
+                                <div className="ws-settings-input-row">
+                                  <textarea
+                                    className="admin-input"
+                                    rows={6}
+                                    placeholder={`<p>Hi {{name}},</p>\n<p>Click below to set your password:</p>\n<p><a href="{{link}}">Set your password</a></p>`}
+                                    value={paywallDraft[ws.id]?.welcomeEmailBody ?? ''}
+                                    style={{ resize: 'vertical', fontFamily: 'monospace', fontSize: '0.8125rem' }}
+                                    onChange={(e) =>
+                                      setPaywallDraft((prev) => ({
+                                        ...prev,
+                                        [ws.id]: { ...(prev[ws.id] ?? {}), welcomeEmailBody: e.target.value },
+                                      }))
+                                    }
+                                  />
+                                </div>
+                              </div>
+                            )}
+                          </div>
+
+                          {/* ── Email Verification accordion ── */}
+                          <div className="email-tab-section" style={{ marginBottom: '1rem' }}>
+                            <button
+                              type="button"
+                              className="email-tab-header"
+                              onClick={() => setVerifyEmailOpen((prev) => ({ ...prev, [ws.id]: !prev[ws.id] }))}
+                            >
+                              <span>Email Verification</span>
+                              <span className="email-tab-chevron">{verifyEmailOpen[ws.id] ? '▲' : '▼'}</span>
+                            </button>
+                            {verifyEmailOpen[ws.id] && (
+                              <div className="email-tab-body">
+                                <p className="ws-settings-hint" style={{ marginBottom: '0.75rem' }}>
+                                  Sent to self-registered (free) learners when they create an account. Use <code>{'{{name}}'}</code> and <code>{'{{link}}'}</code> (email verification link).
+                                </p>
+                                <p className="ws-settings-label" style={{ marginBottom: '0.375rem' }}>Subject</p>
+                                <div className="ws-settings-input-row" style={{ marginBottom: '0.75rem' }}>
+                                  <input
+                                    className="admin-input"
+                                    type="text"
+                                    placeholder="Verify your email to get started"
+                                    value={paywallDraft[ws.id]?.verificationEmailSubject ?? ''}
+                                    onChange={(e) =>
+                                      setPaywallDraft((prev) => ({
+                                        ...prev,
+                                        [ws.id]: { ...(prev[ws.id] ?? {}), verificationEmailSubject: e.target.value },
+                                      }))
+                                    }
+                                  />
+                                </div>
+                                <p className="ws-settings-label" style={{ marginBottom: '0.375rem' }}>Body (HTML)</p>
+                                <div className="ws-settings-input-row">
+                                  <textarea
+                                    className="admin-input"
+                                    rows={6}
+                                    placeholder={`<p>Hi {{name}},</p>\n<p>Click below to verify your email:</p>\n<p><a href="{{link}}">Verify email</a></p>`}
+                                    value={paywallDraft[ws.id]?.verificationEmailBody ?? ''}
+                                    style={{ resize: 'vertical', fontFamily: 'monospace', fontSize: '0.8125rem' }}
+                                    onChange={(e) =>
+                                      setPaywallDraft((prev) => ({
+                                        ...prev,
+                                        [ws.id]: { ...(prev[ws.id] ?? {}), verificationEmailBody: e.target.value },
+                                      }))
+                                    }
+                                  />
+                                </div>
+                              </div>
+                            )}
                           </div>
 
                           {paywallGroupsLoading[ws.id] ? (

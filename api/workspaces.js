@@ -207,7 +207,7 @@ export default async function handler(req, res) {
         if (pc === null) {
           updates.paywallConfig = null;
         } else if (typeof pc === 'object' && !Array.isArray(pc)) {
-          const { enabled, registrationEnabled, paymentUrl, selfPacedProductId, cohortProductId, webhookSecret, zapierWebhookUrl, level2Groups, level3Groups, demoGroups, paywallTitle, paywallDescription, paywallCtaText, welcomeEmail } = pc;
+          const { enabled, registrationEnabled, paymentUrl, selfPacedProductId, cohortProductId, webhookSecret, zapierWebhookUrl, level2Groups, level3Groups, demoGroups, paywallTitle, paywallDescription, paywallCtaText, welcomeEmail, verificationEmail } = pc;
           if (typeof enabled !== 'boolean') {
             return res.status(400).json({ error: 'paywallConfig.enabled must be a boolean' });
           }
@@ -246,6 +246,17 @@ export default async function handler(req, res) {
               return res.status(400).json({ error: 'paywallConfig.welcomeEmail.body must be a string or null' });
             }
           }
+          if (verificationEmail !== undefined && verificationEmail !== null) {
+            if (typeof verificationEmail !== 'object' || Array.isArray(verificationEmail)) {
+              return res.status(400).json({ error: 'paywallConfig.verificationEmail must be an object or null' });
+            }
+            if (verificationEmail.subject != null && typeof verificationEmail.subject !== 'string') {
+              return res.status(400).json({ error: 'paywallConfig.verificationEmail.subject must be a string or null' });
+            }
+            if (verificationEmail.body != null && typeof verificationEmail.body !== 'string') {
+              return res.status(400).json({ error: 'paywallConfig.verificationEmail.body must be a string or null' });
+            }
+          }
           // Preserve existing webhookSecret; auto-generate a secure random key if none exists
           let resolvedWebhookSecret = (typeof webhookSecret === 'string' && webhookSecret.trim()) ? webhookSecret.trim() : null;
           if (!resolvedWebhookSecret) {
@@ -273,6 +284,12 @@ export default async function handler(req, res) {
                   body: (typeof welcomeEmail.body === 'string' && welcomeEmail.body.trim()) ? welcomeEmail.body.trim() : null,
                 })
               : (snap.data()?.paywallConfig?.welcomeEmail ?? null),
+            verificationEmail: (verificationEmail !== undefined)
+              ? (verificationEmail == null ? null : {
+                  subject: (typeof verificationEmail.subject === 'string' && verificationEmail.subject.trim()) ? verificationEmail.subject.trim() : null,
+                  body: (typeof verificationEmail.body === 'string' && verificationEmail.body.trim()) ? verificationEmail.body.trim() : null,
+                })
+              : (snap.data()?.paywallConfig?.verificationEmail ?? null),
           };
         } else {
           return res.status(400).json({ error: 'paywallConfig must be an object or null' });

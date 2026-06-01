@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { signInWithEmailAndPassword, sendEmailVerification, signOut } from 'firebase/auth';
+import { signInWithEmailAndPassword, signOut } from 'firebase/auth';
 import { auth } from '../firebase';
 import './RegisterPage.css';
 
@@ -43,14 +43,11 @@ export default function RegisterPage() {
       const body = await res.json();
       if (!res.ok) throw new Error(body.error ?? 'Registration failed');
 
-      // 2. Sign in to obtain a Firebase session
+      // 2. Sign in briefly to establish a session, then sign out — user must
+      //    verify their email (sent by the server) before accessing the app
       const credential = await signInWithEmailAndPassword(auth, email, password);
-
-      // 3. Send email verification
-      await sendEmailVerification(credential.user);
-
-      // 4. Sign out — user must verify before accessing the app
       await signOut(auth);
+      void credential; // suppress lint warning
 
       setPageState('success');
     } catch (err) {

@@ -16,6 +16,7 @@ import CertificatesPage from './pages/CertificatesPage';
 import CertificatePage from './pages/CertificatePage';
 import AdminRoute from './components/AdminRoute';
 import RegisterPage from './pages/RegisterPage';
+import AuthActionPage from './pages/AuthActionPage';
 
 /** Redirects to /review for reviewers and learners, /graph for everyone else. */
 function RoleRedirect() {
@@ -62,6 +63,9 @@ function App() {
 
               {/* Public learner registration page */}
               <Route path="/register/:workspaceId" element={<RegisterPage />} />
+
+              {/* Firebase Auth action handler — password reset & email verification */}
+              <Route path="/auth/action" element={<AuthActionPage />} />
 
               <Route
                 element={
