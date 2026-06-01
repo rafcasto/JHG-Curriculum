@@ -199,7 +199,7 @@ export default async function handler(req, res) {
   // Log incoming request (mask secret for security)
   console.log('[api/webhooks/payment] Incoming payload:', JSON.stringify({ ...body, secret: body.secret ? '***' : undefined }));
 
-  const { email, name, workspaceId, productId, secret } = body;
+  const { email, name, workspaceId, productId, accessLevel: rawAccessLevel, secret } = body;
 
   // Validate required fields
   if (!email || typeof email !== 'string' || !email.includes('@')) {
@@ -210,9 +210,10 @@ export default async function handler(req, res) {
     console.error('[api/webhooks/payment] Validation failed: workspaceId is missing —', JSON.stringify(workspaceId));
     return res.status(400).json({ error: 'workspaceId is required' });
   }
-  if (!productId || typeof productId !== 'string') {
-    console.error('[api/webhooks/payment] Validation failed: productId is missing —', JSON.stringify(productId));
-    return res.status(400).json({ error: 'productId is required' });
+  // Either productId (resolved against paywallConfig) or accessLevel (2 or 3) must be provided
+  if (!productId && rawAccessLevel == null) {
+    console.error('[api/webhooks/payment] Validation failed: either productId or accessLevel is required');
+    return res.status(400).json({ error: 'either productId or accessLevel (2 or 3) is required' });
   }
   if (!secret || typeof secret !== 'string') {
     console.error('[api/webhooks/payment] Validation failed: secret is missing');
@@ -243,16 +244,25 @@ export default async function handler(req, res) {
     return res.status(401).json({ error: 'Invalid secret' });
   }
 
-  // Resolve productId → access level
+  // Resolve access level — either from productId (against paywallConfig) or directly from accessLevel field
   const { selfPacedProductId, cohortProductId } = wsData?.paywallConfig ?? {};
   let accessLevel;
-  if (productId === selfPacedProductId) {
-    accessLevel = 2;
-  } else if (productId === cohortProductId) {
-    accessLevel = 3;
+  if (productId) {
+    if (productId === selfPacedProductId) {
+      accessLevel = 2;
+    } else if (productId === cohortProductId) {
+      accessLevel = 3;
+    } else {
+      console.error(`[api/webhooks/payment] productId mismatch — received: '${productId}', configured selfPacedProductId: '${selfPacedProductId}', cohortProductId: '${cohortProductId}'`);
+      return res.status(400).json({ error: `productId '${productId}' is not configured for this workspace` });
+    }
   } else {
-    console.error(`[api/webhooks/payment] productId mismatch — received: '${productId}', configured selfPacedProductId: '${selfPacedProductId}', cohortProductId: '${cohortProductId}'`);
-    return res.status(400).json({ error: `productId '${productId}' is not configured for this workspace` });
+    const lvl = Number(rawAccessLevel);
+    if (lvl !== 2 && lvl !== 3) {
+      console.error(`[api/webhooks/payment] Invalid accessLevel — received: ${rawAccessLevel}, must be 2 (self-paced) or 3 (cohort)`);
+      return res.status(400).json({ error: 'accessLevel must be 2 (self-paced) or 3 (cohort)' });
+    }
+    accessLevel = lvl;
   }
 
   const displayName = typeof name === 'string' ? name.trim() || undefined : undefined;
