@@ -281,27 +281,37 @@ export default async function handler(req, res) {
     await grantAccess(workspaceId, uid, email, displayName, accessLevel);
     console.log(`[api/webhooks/payment] Granted level ${accessLevel} (productId=${productId}): user=${uid} (${email}) workspace=${workspaceId} created=${created}`);
 
-    // Send welcome email with password-set link to newly created users (best-effort, non-blocking)
+    // Send welcome email with password-set link to newly created users.
+    // Awaited before responding so the serverless function stays alive long enough to complete.
     if (created) {
-      sendWelcomeEmail(email, displayName ?? null, wsData)
-        .catch((err) => console.error('[api/webhooks/payment] Welcome email failed:', err.message));
+      try {
+        await sendWelcomeEmail(email, displayName ?? null, wsData);
+        console.log(`[api/webhooks/payment] Welcome email sent to ${email}`);
+      } catch (err) {
+        console.error('[api/webhooks/payment] Welcome email failed:', err.message);
+      }
     }
 
-    // Fire outgoing Zapier webhook if configured (best-effort, non-blocking)
+    // Fire outgoing Zapier webhook if configured.
+    // Awaited before responding for the same serverless-lifetime reason.
     const zapierWebhookUrl = wsData?.paywallConfig?.zapierWebhookUrl;
     if (zapierWebhookUrl) {
-      fetch(zapierWebhookUrl, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          email,
-          name: displayName ?? null,
-          workspaceId,
-          accessLevel,
-          userId: uid,
-          created,
-        }),
-      }).catch((err) => console.error('[api/webhooks/payment] Zapier outgoing webhook failed:', err.message));
+      try {
+        await fetch(zapierWebhookUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            email,
+            name: displayName ?? null,
+            workspaceId,
+            accessLevel,
+            userId: uid,
+            created,
+          }),
+        });
+      } catch (err) {
+        console.error('[api/webhooks/payment] Zapier outgoing webhook failed:', err.message);
+      }
     }
 
     return res.status(200).json({ ok: true, userId: uid, created });
