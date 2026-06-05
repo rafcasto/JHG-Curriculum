@@ -66,6 +66,7 @@ const db = getFirestore(adminApp);
 
 /**
  * Fetches a receipt PDF from a public URL and returns it as a Buffer.
+ * Validates content-type and file size to ensure it's a valid PDF.
  * Returns null if the fetch fails or if receiptUrl is not provided.
  */
 async function fetchReceiptBuffer(receiptUrl) {
@@ -78,8 +79,27 @@ async function fetchReceiptBuffer(receiptUrl) {
       console.warn(`[api/webhooks/payment] Receipt fetch failed with status ${response.status}: ${receiptUrl}`);
       return null;
     }
-    const buffer = await response.arrayBuffer();
-    return Buffer.from(buffer);
+
+    // Validate content-type is PDF
+    const contentType = response.headers.get('content-type');
+    if (contentType && !contentType.includes('application/pdf')) {
+      console.warn(`[api/webhooks/payment] Receipt content-type is not PDF: ${contentType}`);
+      return null;
+    }
+
+    // Get content-length to validate file size (max 10MB)
+    const contentLength = response.headers.get('content-length');
+    if (contentLength && parseInt(contentLength) > 10 * 1024 * 1024) {
+      console.warn(`[api/webhooks/payment] Receipt file too large: ${contentLength} bytes (max 10MB)`);
+      return null;
+    }
+
+    const arrayBuffer = await response.arrayBuffer();
+    const buffer = Buffer.from(arrayBuffer);
+    
+    // Log success for debugging
+    console.log(`[api/webhooks/payment] Receipt fetched successfully: ${buffer.length} bytes from ${receiptUrl}`);
+    return buffer;
   } catch (err) {
     console.warn(`[api/webhooks/payment] Receipt fetch error: ${err.message}`);
     return null;
@@ -138,12 +158,13 @@ async function sendPaymentConfirmationEmail(email, displayName, wsData, accessLe
     html,
   };
 
-  // Attach receipt if available
+  // Attach receipt if available — convert Buffer to base64 for Resend API
   if (receiptBuffer) {
+    const base64Content = receiptBuffer.toString('base64');
     emailPayload.attachments = [
       {
         filename: 'receipt.pdf',
-        content: receiptBuffer,
+        content: base64Content,
       },
     ];
   }
