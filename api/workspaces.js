@@ -207,7 +207,7 @@ export default async function handler(req, res) {
         if (pc === null) {
           updates.paywallConfig = null;
         } else if (typeof pc === 'object' && !Array.isArray(pc)) {
-          const { enabled, registrationEnabled, paymentUrl, selfPacedProductId, cohortProductId, webhookSecret, zapierWebhookUrl, level2Groups, level3Groups, demoGroups, paywallTitle, paywallDescription, paywallCtaText, welcomeEmail, verificationEmail } = pc;
+          const { enabled, registrationEnabled, paymentUrl, selfPacedProductId, cohortProductId, webhookSecret, zapierWebhookUrl, level2Groups, level3Groups, demoGroups, paywallTitle, paywallDescription, paywallCtaText, welcomeEmail, verificationEmail, paymentConfirmationEmail } = pc;
           if (typeof enabled !== 'boolean') {
             return res.status(400).json({ error: 'paywallConfig.enabled must be a boolean' });
           }
@@ -257,6 +257,17 @@ export default async function handler(req, res) {
               return res.status(400).json({ error: 'paywallConfig.verificationEmail.body must be a string or null' });
             }
           }
+          if (paymentConfirmationEmail !== undefined && paymentConfirmationEmail !== null) {
+            if (typeof paymentConfirmationEmail !== 'object' || Array.isArray(paymentConfirmationEmail)) {
+              return res.status(400).json({ error: 'paywallConfig.paymentConfirmationEmail must be an object or null' });
+            }
+            if (paymentConfirmationEmail.subject != null && typeof paymentConfirmationEmail.subject !== 'string') {
+              return res.status(400).json({ error: 'paywallConfig.paymentConfirmationEmail.subject must be a string or null' });
+            }
+            if (paymentConfirmationEmail.body != null && typeof paymentConfirmationEmail.body !== 'string') {
+              return res.status(400).json({ error: 'paywallConfig.paymentConfirmationEmail.body must be a string or null' });
+            }
+          }
           // Preserve existing webhookSecret; auto-generate a secure random key if none exists
           let resolvedWebhookSecret = (typeof webhookSecret === 'string' && webhookSecret.trim()) ? webhookSecret.trim() : null;
           if (!resolvedWebhookSecret) {
@@ -290,6 +301,12 @@ export default async function handler(req, res) {
                   body: (typeof verificationEmail.body === 'string' && verificationEmail.body.trim()) ? verificationEmail.body.trim() : null,
                 })
               : (snap.data()?.paywallConfig?.verificationEmail ?? null),
+            paymentConfirmationEmail: (paymentConfirmationEmail !== undefined)
+              ? (paymentConfirmationEmail == null ? null : {
+                  subject: (typeof paymentConfirmationEmail.subject === 'string' && paymentConfirmationEmail.subject.trim()) ? paymentConfirmationEmail.subject.trim() : null,
+                  body: (typeof paymentConfirmationEmail.body === 'string' && paymentConfirmationEmail.body.trim()) ? paymentConfirmationEmail.body.trim() : null,
+                })
+              : (snap.data()?.paywallConfig?.paymentConfirmationEmail ?? null),
           };
         } else {
           return res.status(400).json({ error: 'paywallConfig must be an object or null' });

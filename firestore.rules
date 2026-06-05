@@ -74,5 +74,13 @@ service cloud.firestore {
       allow write: if false;
     }
 
+    // payments — user can read own payment records; admin can read all; no direct client write
+    // (written by webhook after successful payment to create audit trail with receipt metadata)
+    match /payments/{paymentId} {
+      allow read: if request.auth != null &&
+        (resource.data.uid == request.auth.uid || request.auth.token.role == 'admin');
+      allow write: if false;
+    }
+
   }
 }

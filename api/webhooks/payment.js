@@ -65,6 +65,161 @@ const auth = getAuth(adminApp);
 const db = getFirestore(adminApp);
 
 /**
+ * Fetches a receipt PDF from a public URL and returns it as a Buffer.
+ * Returns null if the fetch fails or if receiptUrl is not provided.
+ */
+async function fetchReceiptBuffer(receiptUrl) {
+  if (!receiptUrl || typeof receiptUrl !== 'string') {
+    return null;
+  }
+  try {
+    const response = await fetch(receiptUrl);
+    if (!response.ok) {
+      console.warn(`[api/webhooks/payment] Receipt fetch failed with status ${response.status}: ${receiptUrl}`);
+      return null;
+    }
+    const buffer = await response.arrayBuffer();
+    return Buffer.from(buffer);
+  } catch (err) {
+    console.warn(`[api/webhooks/payment] Receipt fetch error: ${err.message}`);
+    return null;
+  }
+}
+
+/**
+ * Sends a payment confirmation email with optional receipt attachment.
+ * Uses Resend API (https://resend.com). Requires RESEND_API_KEY and RESEND_FROM_EMAIL env vars.
+ * The email template is loaded from wsData.paywallConfig.paymentConfirmationEmail,
+ * falling back to a default. Supports {{name}}, {{date}}, {{accessLevel}} placeholders.
+ * Attachment is a PDF buffer from the receipt. Gracefully handles attachment failures.
+ */
+async function sendPaymentConfirmationEmail(email, displayName, wsData, accessLevel, receiptBuffer) {
+  const apiKey = process.env.RESEND_API_KEY;
+  const fromEmail = process.env.RESEND_FROM_EMAIL;
+  if (!apiKey || !fromEmail) {
+    console.warn('[api/webhooks/payment] RESEND_API_KEY or RESEND_FROM_EMAIL not set — skipping payment confirmation email');
+    return false;
+  }
+
+  const nameOrEmail = displayName ?? email;
+  const now = new Date();
+  const dateStr = now.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+  const levelLabel = accessLevel === 3 ? 'Cohort Access' : 'Self-Paced Access';
+
+  // Resolve template — fall back to built-in default if not configured on the workspace
+  const emailTemplate = wsData?.paywallConfig?.paymentConfirmationEmail ?? {};
+
+  const DEFAULT_SUBJECT = 'Payment Received — Receipt Attached';
+  const DEFAULT_BODY = [
+    '<p>Hi {{name}},</p>',
+    '<p>Thank you for your payment! Your order has been confirmed.</p>',
+    '<p><strong>Order Details:</strong></p>',
+    '<ul>',
+    '<li>Date: {{date}}</li>',
+    '<li>Access Level: {{accessLevel}}</li>',
+    '</ul>',
+    '<p>Your receipt is attached to this email. You will receive a separate email with instructions to set your password and access your account.</p>',
+    '<p>If you have any questions, please contact us at <a href="mailto:rafael@talentdojo.pro">rafael@talentdojo.pro</a>.</p>',
+  ].join('\n');
+
+  const interpolate = (str) =>
+    str
+      .replace(/\{\{name\}\}/g, nameOrEmail)
+      .replace(/\{\{date\}\}/g, dateStr)
+      .replace(/\{\{accessLevel\}\}/g, levelLabel);
+
+  const subject = interpolate(emailTemplate.subject?.trim() || DEFAULT_SUBJECT);
+  const html = interpolate(emailTemplate.body?.trim() || DEFAULT_BODY);
+
+  const emailPayload = {
+    from: fromEmail,
+    to: [email],
+    subject,
+    html,
+  };
+
+  // Attach receipt if available
+  if (receiptBuffer) {
+    emailPayload.attachments = [
+      {
+        filename: 'receipt.pdf',
+        content: receiptBuffer,
+      },
+    ];
+  }
+
+  try {
+    const sendRes = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify(emailPayload),
+    });
+
+    if (!sendRes.ok) {
+      const errBody = await sendRes.json().catch(() => ({}));
+      throw new Error(`Resend HTTP ${sendRes.status}: ${errBody.message ?? JSON.stringify(errBody)}`);
+    }
+
+    return true;
+  } catch (err) {
+    console.error('[api/webhooks/payment] Payment confirmation email failed:', err.message);
+    return false;
+  }
+}
+
+/**
+ * Stores a payment record in the payments collection for audit trail.
+ * Returns true if successful, false if there was an error.
+ */
+async function storePaymentRecord(uid, email, workspaceId, accessLevel, receiptUrl) {
+  try {
+    const paymentId = `${uid}_${workspaceId}_${Date.now()}`;
+    const paymentRef = db.collection('payments').doc(paymentId);
+    await paymentRef.set({
+      uid,
+      email,
+      workspaceId,
+      accessLevel,
+      receiptUrl: receiptUrl ?? null,
+      createdAt: new Date(),
+      sentEmails: {
+        paymentConfirmation: false,
+        passwordReset: false,
+      },
+    });
+    return true;
+  } catch (err) {
+    console.error('[api/webhooks/payment] Failed to store payment record:', err.message);
+    return false;
+  }
+}
+
+/**
+ * Updates the payment record with which emails were successfully sent.
+ */
+async function updatePaymentRecord(uid, workspaceId, emailsSent) {
+  try {
+    const paymentQuery = await db
+      .collection('payments')
+      .where('uid', '==', uid)
+      .where('workspaceId', '==', workspaceId)
+      .orderBy('createdAt', 'desc')
+      .limit(1)
+      .get();
+
+    if (!paymentQuery.empty) {
+      const paymentDoc = paymentQuery.docs[0];
+      await paymentDoc.ref.update({ sentEmails: emailsSent });
+    }
+  } catch (err) {
+    console.error('[api/webhooks/payment] Failed to update payment record:', err.message);
+  }
+}
+
+/**
  * Looks up a Firebase Auth user by email, creating them if they don't exist.
  * Sets the 'learner' role claim only if the user has no existing role claim
  * (preserves admin / editor / reviewer roles).
@@ -211,7 +366,7 @@ export default async function handler(req, res) {
   // Log incoming request (mask secret for security)
   console.log('[api/webhooks/payment] Incoming payload:', JSON.stringify({ ...body, secret: body.secret ? '***' : undefined }));
 
-  const { email, name, workspaceId, productId, accessLevel: rawAccessLevel, secret } = body;
+  const { email, name, workspaceId, productId, accessLevel: rawAccessLevel, secret, receiptUrl } = body;
 
   // Validate required fields
   if (!email || typeof email !== 'string' || !email.includes('@')) {
@@ -293,14 +448,39 @@ export default async function handler(req, res) {
     await grantAccess(workspaceId, uid, email, displayName, accessLevel);
     console.log(`[api/webhooks/payment] Granted level ${accessLevel} (productId=${productId}): user=${uid} (${email}) workspace=${workspaceId} created=${created}`);
 
-    // Send welcome email with password-set link to newly created users.
-    // Awaited before responding so the serverless function stays alive long enough to complete.
+    // Store payment record for audit trail
+    const recordStored = await storePaymentRecord(uid, email, workspaceId, accessLevel, receiptUrl);
+
+    const emailsSent = {
+      paymentConfirmation: false,
+      passwordReset: false,
+    };
+
+    // Send payment confirmation email with receipt attachment (for newly created users)
     if (created) {
       try {
-        await sendWelcomeEmail(email, displayName ?? null, wsData);
-        console.log(`[api/webhooks/payment] Welcome email sent to ${email}`);
+        const receiptBuffer = await fetchReceiptBuffer(receiptUrl);
+        const confirmationSent = await sendPaymentConfirmationEmail(email, displayName ?? null, wsData, accessLevel, receiptBuffer);
+        if (confirmationSent) {
+          emailsSent.paymentConfirmation = true;
+          console.log(`[api/webhooks/payment] Payment confirmation email sent to ${email}`);
+        }
       } catch (err) {
-        console.error('[api/webhooks/payment] Welcome email failed:', err.message);
+        console.error('[api/webhooks/payment] Payment confirmation email failed:', err.message);
+      }
+
+      // Send password-reset email with link to set password (existing behavior)
+      try {
+        await sendWelcomeEmail(email, displayName ?? null, wsData);
+        emailsSent.passwordReset = true;
+        console.log(`[api/webhooks/payment] Password-reset email sent to ${email}`);
+      } catch (err) {
+        console.error('[api/webhooks/payment] Password-reset email failed:', err.message);
+      }
+
+      // Update payment record with email send status
+      if (recordStored) {
+        await updatePaymentRecord(uid, workspaceId, emailsSent);
       }
     }
 

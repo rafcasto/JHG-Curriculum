@@ -137,6 +137,7 @@ function WorkspacesSection({ users, getToken, refreshUsers }) {
   const [paywallCopyOpen, setPaywallCopyOpen] = useState({}); // wsId -> boolean
   const [pwdEmailOpen, setPwdEmailOpen] = useState({}); // wsId -> boolean
   const [verifyEmailOpen, setVerifyEmailOpen] = useState({}); // wsId -> boolean
+  const [paymentConfirmationEmailOpen, setPaymentConfirmationEmailOpen] = useState({}); // wsId -> boolean
 
   // ── App Settings ────────────────────────────────────────────────────────────
   const [appSettingsOpen, setAppSettingsOpen] = useState(false);
@@ -177,6 +178,8 @@ function WorkspacesSection({ users, getToken, refreshUsers }) {
             welcomeEmailBody: pc.welcomeEmail?.body ?? '',
             verificationEmailSubject: pc.verificationEmail?.subject ?? '',
             verificationEmailBody: pc.verificationEmail?.body ?? '',
+            paymentConfirmationEmailSubject: pc.paymentConfirmationEmail?.subject ?? '',
+            paymentConfirmationEmailBody: pc.paymentConfirmationEmail?.body ?? '',
           },
         }));
       }
@@ -232,6 +235,10 @@ function WorkspacesSection({ users, getToken, refreshUsers }) {
             verificationEmail: {
               subject: draft.verificationEmailSubject?.trim() || null,
               body: draft.verificationEmailBody?.trim() || null,
+            },
+            paymentConfirmationEmail: {
+              subject: draft.paymentConfirmationEmailSubject?.trim() || null,
+              body: draft.paymentConfirmationEmailBody?.trim() || null,
             },
           },
         }),
@@ -1328,6 +1335,56 @@ function WorkspacesSection({ users, getToken, refreshUsers }) {
                                       setPaywallDraft((prev) => ({
                                         ...prev,
                                         [ws.id]: { ...(prev[ws.id] ?? {}), verificationEmailBody: e.target.value },
+                                      }))
+                                    }
+                                  />
+                                </div>
+                              </div>
+                            )}
+                          </div>
+
+                          {/* ── Payment Confirmation Email accordion ── */}
+                          <div className="email-tab-section" style={{ marginBottom: '1rem' }}>
+                            <button
+                              type="button"
+                              className="email-tab-header"
+                              onClick={() => setPaymentConfirmationEmailOpen((prev) => ({ ...prev, [ws.id]: !prev[ws.id] }))}
+                            >
+                              <span>Payment Confirmation Email</span>
+                              <span className="email-tab-chevron">{paymentConfirmationEmailOpen[ws.id] ? '▲' : '▼'}</span>
+                            </button>
+                            {paymentConfirmationEmailOpen[ws.id] && (
+                              <div className="email-tab-body">
+                                <p className="ws-settings-hint" style={{ marginBottom: '0.75rem' }}>
+                                  Sent to new paid learners after payment with order details and receipt attachment. Use <code>{'{{name}}'}</code>, <code>{'{{date}}'}</code>, and <code>{'{{accessLevel}}'}</code> placeholders.
+                                </p>
+                                <p className="ws-settings-label" style={{ marginBottom: '0.375rem' }}>Subject</p>
+                                <div className="ws-settings-input-row" style={{ marginBottom: '0.75rem' }}>
+                                  <input
+                                    className="admin-input"
+                                    type="text"
+                                    placeholder="Payment Received — Receipt Attached"
+                                    value={paywallDraft[ws.id]?.paymentConfirmationEmailSubject ?? ''}
+                                    onChange={(e) =>
+                                      setPaywallDraft((prev) => ({
+                                        ...prev,
+                                        [ws.id]: { ...(prev[ws.id] ?? {}), paymentConfirmationEmailSubject: e.target.value },
+                                      }))
+                                    }
+                                  />
+                                </div>
+                                <p className="ws-settings-label" style={{ marginBottom: '0.375rem' }}>Body (HTML)</p>
+                                <div className="ws-settings-input-row">
+                                  <textarea
+                                    className="admin-input"
+                                    rows={8}
+                                    placeholder={`<p>Hi {{name}},</p>\n<p>Thank you for your payment! Your order has been confirmed.</p>\n<p><strong>Order Details:</strong></p>\n<ul>\n<li>Date: {{date}}</li>\n<li>Access Level: {{accessLevel}}</li>\n</ul>\n<p>Your receipt is attached. You will receive a separate email with instructions to set your password.</p>`}
+                                    value={paywallDraft[ws.id]?.paymentConfirmationEmailBody ?? ''}
+                                    style={{ resize: 'vertical', fontFamily: 'monospace', fontSize: '0.8125rem' }}
+                                    onChange={(e) =>
+                                      setPaywallDraft((prev) => ({
+                                        ...prev,
+                                        [ws.id]: { ...(prev[ws.id] ?? {}), paymentConfirmationEmailBody: e.target.value },
                                       }))
                                     }
                                   />
