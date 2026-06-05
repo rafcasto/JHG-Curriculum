@@ -65,55 +65,81 @@ const auth = getAuth(adminApp);
 const db = getFirestore(adminApp);
 
 /**
- * Fetches a receipt PDF from a public URL and returns it as a Buffer.
- * Validates content-type and file size to ensure it's a valid PDF.
- * Returns null if the fetch fails or if receiptUrl is not provided.
+ * Fetches receipt URL (validation only) to ensure it's accessible.
+ * Returns the URL if valid, null otherwise.
+ * The actual receipt will be linked in the email, not attached.
  */
-async function fetchReceiptBuffer(receiptUrl) {
+async function fetchReceiptUrl(receiptUrl) {
   if (!receiptUrl || typeof receiptUrl !== 'string') {
     return null;
   }
+
   try {
-    const response = await fetch(receiptUrl);
-    if (!response.ok) {
-      console.warn(`[api/webhooks/payment] Receipt fetch failed with status ${response.status}: ${receiptUrl}`);
+    const response = await fetch(receiptUrl, { method: 'HEAD' });
+    if (response.ok) {
+      console.log(`[api/webhooks/payment] Receipt URL is accessible: ${receiptUrl}`);
+      return receiptUrl;
+    } else {
+      console.warn(`[api/webhooks/payment] Receipt URL returned status ${response.status}: ${receiptUrl}`);
       return null;
     }
-
-    // Validate content-type is PDF
-    const contentType = response.headers.get('content-type');
-    if (contentType && !contentType.includes('application/pdf')) {
-      console.warn(`[api/webhooks/payment] Receipt content-type is not PDF: ${contentType}`);
-      return null;
-    }
-
-    // Get content-length to validate file size (max 10MB)
-    const contentLength = response.headers.get('content-length');
-    if (contentLength && parseInt(contentLength) > 10 * 1024 * 1024) {
-      console.warn(`[api/webhooks/payment] Receipt file too large: ${contentLength} bytes (max 10MB)`);
-      return null;
-    }
-
-    const arrayBuffer = await response.arrayBuffer();
-    const buffer = Buffer.from(arrayBuffer);
-    
-    // Log success for debugging
-    console.log(`[api/webhooks/payment] Receipt fetched successfully: ${buffer.length} bytes from ${receiptUrl}`);
-    return buffer;
   } catch (err) {
-    console.warn(`[api/webhooks/payment] Receipt fetch error: ${err.message}`);
+    console.warn(`[api/webhooks/payment] Receipt URL validation error: ${err.message}`);
     return null;
   }
 }
 
 /**
- * Sends a payment confirmation email with optional receipt attachment.
+ * Converts HTML content to a PDF Buffer using an external service.
+ * Falls back gracefully if conversion fails.
+ */
+async function convertHtmlToPdf(htmlContent, sourceUrl) {
+  try {
+    // Use html2pdf.com API to convert HTML to PDF
+    // Alternative: use a self-hosted service or puppeteer if needed
+    const conversionRes = await fetch('https://api.html2pdf.app/v1/convert', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        html: htmlContent,
+        // PDF options
+        options: {
+          margin: 10,
+          filename: 'receipt.pdf',
+          image: { type: 'jpeg', quality: 0.98 },
+          html2canvas: { scale: 2 },
+          jsPDF: { orientation: 'portrait', unit: 'mm', format: 'a4' },
+        },
+      }),
+      timeout: 30000, // 30 second timeout
+    });
+
+    if (!conversionRes.ok) {
+      const errBody = await conversionRes.json().catch(() => ({}));
+      console.warn(
+        `[api/webhooks/payment] PDF conversion failed: HTTP ${conversionRes.status} — ${errBody.error ?? JSON.stringify(errBody)}`
+      );
+      return null;
+    }
+
+    const pdfBuffer = await conversionRes.arrayBuffer();
+    console.log(`[api/webhooks/payment] Receipt (HTML→PDF) converted successfully: ${pdfBuffer.byteLength} bytes`);
+    return Buffer.from(pdfBuffer);
+  } catch (err) {
+    console.warn(`[api/webhooks/payment] HTML to PDF conversion error: ${err.message}`);
+    return null;
+  }
+}
+
+/**
+ * Sends a payment confirmation email with receipt download link.
  * Uses Resend API (https://resend.com). Requires RESEND_API_KEY and RESEND_FROM_EMAIL env vars.
  * The email template is loaded from wsData.paywallConfig.paymentConfirmationEmail,
- * falling back to a default. Supports {{name}}, {{date}}, {{accessLevel}} placeholders.
- * Attachment is a PDF buffer from the receipt. Gracefully handles attachment failures.
+ * falling back to a default. Supports {{name}}, {{date}}, {{accessLevel}}, {{receiptUrl}} placeholders.
  */
-async function sendPaymentConfirmationEmail(email, displayName, wsData, accessLevel, receiptBuffer) {
+async function sendPaymentConfirmationEmail(email, displayName, wsData, accessLevel, receiptUrl) {
   const apiKey = process.env.RESEND_API_KEY;
   const fromEmail = process.env.RESEND_FROM_EMAIL;
   if (!apiKey || !fromEmail) {
@@ -129,7 +155,7 @@ async function sendPaymentConfirmationEmail(email, displayName, wsData, accessLe
   // Resolve template — fall back to built-in default if not configured on the workspace
   const emailTemplate = wsData?.paywallConfig?.paymentConfirmationEmail ?? {};
 
-  const DEFAULT_SUBJECT = 'Payment Received — Receipt Attached';
+  const DEFAULT_SUBJECT = 'Payment Received — Download Receipt';
   const DEFAULT_BODY = [
     '<p>Hi {{name}},</p>',
     '<p>Thank you for your payment! Your order has been confirmed.</p>',
@@ -138,7 +164,8 @@ async function sendPaymentConfirmationEmail(email, displayName, wsData, accessLe
     '<li>Date: {{date}}</li>',
     '<li>Access Level: {{accessLevel}}</li>',
     '</ul>',
-    '<p>Your receipt is attached to this email. You will receive a separate email with instructions to set your password and access your account.</p>',
+    '{{#receiptUrl}}<p><a href="{{receiptUrl}}" style="display: inline-block; background-color: #c2001f; color: white; padding: 10px 20px; border-radius: 8px; text-decoration: none; font-weight: bold;">↓ Download Receipt</a></p>{{/receiptUrl}}',
+    '<p>You will receive a separate email with instructions to set your password and access your account.</p>',
     '<p>If you have any questions, please contact us at <a href="mailto:rafael@talentdojo.pro">rafael@talentdojo.pro</a>.</p>',
   ].join('\n');
 
@@ -146,7 +173,9 @@ async function sendPaymentConfirmationEmail(email, displayName, wsData, accessLe
     str
       .replace(/\{\{name\}\}/g, nameOrEmail)
       .replace(/\{\{date\}\}/g, dateStr)
-      .replace(/\{\{accessLevel\}\}/g, levelLabel);
+      .replace(/\{\{accessLevel\}\}/g, levelLabel)
+      .replace(/\{\{receiptUrl\}\}/g, receiptUrl ?? '')
+      .replace(/\{\{#receiptUrl\}\}(.*?)\{\{\/receiptUrl\}\}/gs, (match, content) => (receiptUrl ? content : ''));
 
   const subject = interpolate(emailTemplate.subject?.trim() || DEFAULT_SUBJECT);
   const html = interpolate(emailTemplate.body?.trim() || DEFAULT_BODY);
@@ -157,17 +186,6 @@ async function sendPaymentConfirmationEmail(email, displayName, wsData, accessLe
     subject,
     html,
   };
-
-  // Attach receipt if available — convert Buffer to base64 for Resend API
-  if (receiptBuffer) {
-    const base64Content = receiptBuffer.toString('base64');
-    emailPayload.attachments = [
-      {
-        filename: 'receipt.pdf',
-        content: base64Content,
-      },
-    ];
-  }
 
   try {
     const sendRes = await fetch('https://api.resend.com/emails', {
@@ -480,8 +498,10 @@ export default async function handler(req, res) {
     // Send payment confirmation email with receipt attachment (for newly created users)
     if (created) {
       try {
-        const receiptBuffer = await fetchReceiptBuffer(receiptUrl);
-        const confirmationSent = await sendPaymentConfirmationEmail(email, displayName ?? null, wsData, accessLevel, receiptBuffer);
+        // Validate receipt URL is accessible
+        const validReceiptUrl = await fetchReceiptUrl(receiptUrl);
+        // Send confirmation email with receipt download link
+        const confirmationSent = await sendPaymentConfirmationEmail(email, displayName ?? null, wsData, accessLevel, validReceiptUrl);
         if (confirmationSent) {
           emailsSent.paymentConfirmation = true;
           console.log(`[api/webhooks/payment] Payment confirmation email sent to ${email}`);

@@ -1356,14 +1356,14 @@ function WorkspacesSection({ users, getToken, refreshUsers }) {
                             {paymentConfirmationEmailOpen[ws.id] && (
                               <div className="email-tab-body">
                                 <p className="ws-settings-hint" style={{ marginBottom: '0.75rem' }}>
-                                  Sent to new paid learners after payment with order details and receipt attachment. Use <code>{'{{name}}'}</code>, <code>{'{{date}}'}</code>, and <code>{'{{accessLevel}}'}</code> placeholders.
+                                  Sent to new paid learners after payment with order details and receipt download link. Use <code>{'{{name}}'}</code>, <code>{'{{date}}'}</code>, <code>{'{{accessLevel}}'}</code>, and <code>{'{{receiptUrl}}'}</code> placeholders.
                                 </p>
                                 <p className="ws-settings-label" style={{ marginBottom: '0.375rem' }}>Subject</p>
                                 <div className="ws-settings-input-row" style={{ marginBottom: '0.75rem' }}>
                                   <input
                                     className="admin-input"
                                     type="text"
-                                    placeholder="Payment Received — Receipt Attached"
+                                    placeholder="Payment Received — Download Receipt"
                                     value={paywallDraft[ws.id]?.paymentConfirmationEmailSubject ?? ''}
                                     onChange={(e) =>
                                       setPaywallDraft((prev) => ({
@@ -1377,8 +1377,8 @@ function WorkspacesSection({ users, getToken, refreshUsers }) {
                                 <div className="ws-settings-input-row">
                                   <textarea
                                     className="admin-input"
-                                    rows={8}
-                                    placeholder={`<p>Hi {{name}},</p>\n<p>Thank you for your payment! Your order has been confirmed.</p>\n<p><strong>Order Details:</strong></p>\n<ul>\n<li>Date: {{date}}</li>\n<li>Access Level: {{accessLevel}}</li>\n</ul>\n<p>Your receipt is attached. You will receive a separate email with instructions to set your password.</p>`}
+                                    rows={10}
+                                    placeholder={`<p>Hi {{name}},</p>\n<p>Thank you for your payment! Your order has been confirmed.</p>\n<p><strong>Order Details:</strong></p>\n<ul>\n<li>Date: {{date}}</li>\n<li>Access Level: {{accessLevel}}</li>\n</ul>\n<p><a href="{{receiptUrl}}" style="display: inline-block; background-color: #c2001f; color: white; padding: 10px 20px; border-radius: 8px; text-decoration: none;">↓ Download Receipt</a></p>\n<p>You will receive a separate email with instructions to set your password and access your account.</p>`}
                                     value={paywallDraft[ws.id]?.paymentConfirmationEmailBody ?? ''}
                                     style={{ resize: 'vertical', fontFamily: 'monospace', fontSize: '0.8125rem' }}
                                     onChange={(e) =>
