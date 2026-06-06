@@ -82,7 +82,7 @@ async function requireAdmin(req) {
   return claims;
 }
 
-const ALLOWED_PROFILE_FIELDS = ['firstName', 'lastName', 'dateOfBirth', 'company', 'photoURL'];
+const ALLOWED_PROFILE_FIELDS = ['firstName', 'lastName', 'company', 'photoURL'];
 
 export default async function handler(req, res) {
   // ── Profile (self-service, any authenticated user) ──────────────────────
@@ -102,7 +102,7 @@ export default async function handler(req, res) {
       try {
         const snap = await db.collection('userProfiles').doc(uid).get();
         if (!snap.exists) {
-          return res.json({ uid, firstName: '', lastName: '', dateOfBirth: '', company: '', photoURL: '' });
+          return res.json({ uid, firstName: '', lastName: '', company: '', photoURL: '' });
         }
         return res.json({ uid, ...snap.data() });
       } catch (e) {

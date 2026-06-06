@@ -10,7 +10,7 @@ export default function ProfilePage() {
   const { profile, profileLoading, refreshProfile } = useUserProfile();
   const { workspaces } = useWorkspace();
 
-  const [form, setForm] = useState({ firstName: '', lastName: '', dateOfBirth: '', company: '' });
+  const [form, setForm] = useState({ firstName: '', lastName: '', company: '' });
   const [photoURL, setPhotoURL] = useState('');
   const [photoPreview, setPhotoPreview] = useState('');
   const [saving, setSaving] = useState(false);
@@ -46,7 +46,6 @@ export default function ProfilePage() {
       setForm({
         firstName: profile.firstName ?? '',
         lastName: profile.lastName ?? '',
-        dateOfBirth: profile.dateOfBirth ?? '',
         company: profile.company ?? '',
       });
       setPhotoURL(profile.photoURL ?? '');
@@ -214,15 +213,6 @@ export default function ProfilePage() {
           </div>
 
           <div className="profile-form-row">
-            <div className="profile-field">
-              <label className="profile-label">Date of Birth</label>
-              <input
-                className="profile-input"
-                type="date"
-                value={form.dateOfBirth}
-                onChange={(e) => setForm((f) => ({ ...f, dateOfBirth: e.target.value }))}
-              />
-            </div>
             <div className="profile-field">
               <label className="profile-label">Company</label>
               <input
