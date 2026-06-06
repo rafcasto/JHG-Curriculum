@@ -17,6 +17,8 @@
  *   Body    : {
  *               "email":       "{{customer_email}}",
  *               "name":        "{{customer_name}}",       ← optional
+ *               "firstName":   "{{first_name}}",          ← optional (stored in userProfile)
+ *               "lastName":    "{{last_name}}",           ← optional (stored in userProfile)
  *               "workspaceId": "YOUR_FIRESTORE_WS_ID",
  *               "productId":   "{{product_id}}",          ← matches selfPacedProductId or cohortProductId
  *               "secret":      "YOUR_WORKSPACE_SECRET"
@@ -32,6 +34,8 @@
  * ── Payload reference ─────────────────────────────────────────────────────
  *   email       string   learner's email address
  *   name        string?  optional display name
+ *   firstName   string?  optional first name (stored in userProfile)
+ *   lastName    string?  optional last name (stored in userProfile)
  *   workspaceId string   Firestore workspace document ID
  *   productId   string   must match paywallConfig.selfPacedProductId (→ level 2) or cohortProductId (→ level 3)
  *   secret      string   must match paywallConfig.webhookSecret for this workspace
@@ -293,8 +297,9 @@ async function getOrCreateUser(email, displayName) {
  * - Creates / merges the userProfiles document
  * - Adds the user to the workspace's userIds array
  * - Upgrades paidWorkspaces[workspaceId] if the new level is higher
+ * - Stores firstName and lastName if provided
  */
-async function grantAccess(workspaceId, userId, email, displayName, accessLevel) {
+async function grantAccess(workspaceId, userId, email, displayName, accessLevel, firstName, lastName) {
   const userRef = db.collection('userProfiles').doc(userId);
   const wsRef = db.collection('workspaces').doc(workspaceId);
 
@@ -304,6 +309,8 @@ async function grantAccess(workspaceId, userId, email, displayName, accessLevel)
   const profileData = {
     email,
     ...(displayName ? { displayName } : {}),
+    ...(firstName ? { firstName } : {}),
+    ...(lastName ? { lastName } : {}),
     ...(accessLevel > currentLevel ? { paidWorkspaces: { [workspaceId]: accessLevel } } : {}),
   };
 
@@ -405,7 +412,7 @@ export default async function handler(req, res) {
   // Log incoming request (mask secret for security)
   console.log('[api/webhooks/payment] Incoming payload:', JSON.stringify({ ...body, secret: body.secret ? '***' : undefined }));
 
-  const { email, name, workspaceId, productId, accessLevel: rawAccessLevel, secret, receiptUrl } = body;
+  const { email, name, firstName, lastName, workspaceId, productId, accessLevel: rawAccessLevel, secret, receiptUrl } = body;
 
   // Validate required fields
   if (!email || typeof email !== 'string' || !email.includes('@')) {
@@ -472,6 +479,8 @@ export default async function handler(req, res) {
   }
 
   const displayName = typeof name === 'string' ? name.trim() || undefined : undefined;
+  const parsedFirstName = typeof firstName === 'string' ? firstName.trim() || undefined : undefined;
+  const parsedLastName = typeof lastName === 'string' ? lastName.trim() || undefined : undefined;
 
   // Provision Firebase Auth user
   let uid, created;
@@ -484,7 +493,7 @@ export default async function handler(req, res) {
 
   // Grant workspace access
   try {
-    await grantAccess(workspaceId, uid, email, displayName, accessLevel);
+    await grantAccess(workspaceId, uid, email, displayName, accessLevel, parsedFirstName, parsedLastName);
     console.log(`[api/webhooks/payment] Granted level ${accessLevel} (productId=${productId}): user=${uid} (${email}) workspace=${workspaceId} created=${created}`);
 
     // Store payment record for audit trail
@@ -536,6 +545,8 @@ export default async function handler(req, res) {
           body: JSON.stringify({
             email,
             name: displayName ?? null,
+            firstName: parsedFirstName ?? null,
+            lastName: parsedLastName ?? null,
             workspaceId,
             accessLevel,
             userId: uid,
