@@ -225,12 +225,6 @@ export default function Sidebar({ documents, loading = false, onRefresh, onDocum
       {sortedModules.map((key) => {
         const isGroupLocked = role === 'learner' && !canAccessGroup(key, paywallConfig, paidWorkspaces, currentWorkspace?.id);
         const groupAccessLevel = role === 'learner' ? getGroupAccess(key, paywallConfig) : 'open';
-        const groupPaymentUrl = 
-          groupAccessLevel === 'level3'
-            ? (paywallConfig?.level3PaymentUrl ?? paywallConfig?.paymentUrl)
-            : groupAccessLevel === 'level2'
-              ? (paywallConfig?.level2PaymentUrl ?? paywallConfig?.paymentUrl)
-              : null;
         return (
           <div key={key} className="module-group">
             {key === '__root__' ? (
@@ -256,9 +250,7 @@ export default function Sidebar({ documents, loading = false, onRefresh, onDocum
                       <div className="file-row">
                         <button
                           className={`file-btn ${!isGroupLocked && doc.id === activeId ? 'active' : ''} ${isGroupLocked ? 'file-btn--locked' : ''}`}
-                          onClick={isGroupLocked
-                            ? () => { if (groupPaymentUrl) window.open(groupPaymentUrl, '_blank', 'noopener,noreferrer'); }
-                            : () => navigate(`/file/${doc.id}`)}
+                          onClick={() => navigate(`/file/${doc.id}`)}
                           title={isGroupLocked ? `${doc.title ?? doc.id} — Requires subscription` : doc.title}
                         >
                           {isGroupLocked
@@ -288,9 +280,7 @@ export default function Sidebar({ documents, loading = false, onRefresh, onDocum
                 <div className="module-header-row">
                   <button
                     className="module-header"
-                    onClick={isGroupLocked
-                      ? () => { if (groupPaymentUrl) window.open(groupPaymentUrl, '_blank', 'noopener,noreferrer'); }
-                      : () => toggle(key)}
+                    onClick={() => toggle(key)}
                   >
                     <span className={`chevron ${collapsed[key] ? '' : 'open'}`}>›</span>
                     <span className="module-name">{moduleLabel(key)}</span>
@@ -334,9 +324,7 @@ export default function Sidebar({ documents, loading = false, onRefresh, onDocum
                       <div className="file-row">
                         <button
                           className={`file-btn ${!isGroupLocked && doc.id === activeId ? 'active' : ''} ${isGroupLocked ? 'file-btn--locked' : ''}`}
-                          onClick={isGroupLocked
-                            ? () => { if (groupPaymentUrl) window.open(groupPaymentUrl, '_blank', 'noopener,noreferrer'); }
-                            : () => navigate(`/file/${doc.id}`)}
+                          onClick={() => navigate(`/file/${doc.id}`)}
                           title={isGroupLocked ? `${doc.title ?? doc.id} — Requires subscription` : doc.title}
                         >
                           {isGroupLocked
