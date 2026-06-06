@@ -116,12 +116,22 @@ export default function ReviewerSidebar({ documents = [], submissions = {}, load
         {sortedGroups.map((key) => {
           const isGroupPaywallLocked = role === 'learner' && !canAccessGroup(key, paywallConfig, paidWorkspaces, workspaceId);
           const groupAccessLevel = role === 'learner' ? getGroupAccess(key, paywallConfig) : 'open';
-          const paymentUrl = paywallConfig?.paymentUrl ?? null;
+          const paymentUrl = 
+            groupAccessLevel === 'level3'
+              ? (paywallConfig?.level3PaymentUrl ?? paywallConfig?.paymentUrl)
+              : groupAccessLevel === 'level2'
+                ? (paywallConfig?.level2PaymentUrl ?? paywallConfig?.paymentUrl)
+                : (paywallConfig?.paymentUrl ?? null);
 
           return (
           <div key={key} className="rsb-group">
             {key !== '__root__' && (
-              <button className="rsb-group-header" onClick={() => toggle(key)}>
+              <button
+                className="rsb-group-header"
+                onClick={isGroupPaywallLocked
+                  ? () => { if (paymentUrl) window.open(paymentUrl, '_blank', 'noopener,noreferrer'); }
+                  : () => toggle(key)}
+              >
                 <span className={`rsb-chevron${collapsed[key] ? '' : ' open'}`}>›</span>
                 <span className="rsb-group-name">{folderLabel(key)}</span>
                 {isGroupPaywallLocked && (

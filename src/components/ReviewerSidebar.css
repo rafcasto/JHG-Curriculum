@@ -191,8 +191,7 @@
 /* ── Locked item ─────────────────────────────────────────────────────────── */
 .rsb-file-btn--locked {
   opacity: 0.45;
-  cursor: not-allowed;
-  pointer-events: none;
+  cursor: pointer;
 }
 
 .rsb-status--locked {
