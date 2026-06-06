@@ -223,11 +223,10 @@ export default function ProfilePage() {
                 placeholder="Your company"
               />
             </div>
-          </div>
-
-          <div className="profile-field profile-field--email">
-            <label className="profile-label">Email</label>
-            <input className="profile-input profile-input--readonly" type="email" value={user?.email ?? ''} readOnly />
+            <div className="profile-field">
+              <label className="profile-label">Email</label>
+              <input className="profile-input profile-input--readonly" type="email" value={user?.email ?? ''} readOnly />
+            </div>
           </div>
 
           {error && <p className="profile-error">{error}</p>}
